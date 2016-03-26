@@ -38,8 +38,10 @@ public class UsersWebService {
 		final String bindDn = configProvider.getLdapBindDn();
 		final String password = configProvider.getLdapPassword();
 		final String userBaseDn = configProvider.getUserBaseDn();
+		final String userSearchFilter = configProvider.getUserSearchFilter();
+		final String[] userObjectClasses = configProvider.getNewUserObjectClasses(); 
 		
-		ldapClient = new LdapClient(host, port, bindDn, password, userBaseDn);
+		ldapClient = new LdapClient(host, port, bindDn, password, userBaseDn, userSearchFilter, userObjectClasses);
 		dnPattern = StringUtils.replace(StringUtils.replace(configProvider.getUserDnPattern(), "<user-base-dn>", userBaseDn), "<user-id>", "%s");
 	}
 	
@@ -81,27 +83,50 @@ public class UsersWebService {
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	public JSONObject create(@FormParam("user") JSONObject userJson) { 
-		System.out.println(userJson);		
-		return createSuccessSatus().put("user", userJson);
+		final User user = User.fromJSON(userJson, dnPattern);
+		try { 
+			final User newUser = ldapClient.createUser(user);
+			final String password = userJson.optString("password");
+			if (StringUtils.isNotEmpty(password)) {
+				ldapClient.changePassword(newUser.getUid(), password);
+			}
+			return createSuccessStatus().put("user", newUser.toJSON());
+		} catch (LDAPSDKException ex) {
+			return createFailureStatus(ex);
+		}
 	}
 	
 	@Path("update")
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
-	public JSONObject update(@FormParam("user") JSONObject userJson) { 
-		System.out.println(userJson);		
-		return createSuccessSatus().put("user", userJson);
+	public JSONObject update(@FormParam("user") JSONObject userJson)   { 
+		final User user = User.fromJSON(userJson, dnPattern);
+		try { 
+			final User updatedUser = ldapClient.updateUser(user);
+			final String password = userJson.optString("password");
+			if (StringUtils.isNotEmpty(password)) {
+				ldapClient.changePassword(updatedUser.getUid(), password);
+			}
+			return createSuccessStatus().put("user", updatedUser.toJSON());
+		} catch (LDAPSDKException ex) {
+			return createFailureStatus(ex);
+		}
+		
 	}
 	
 	@Path("password")
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public JSONObject setPassword(@QueryParam("uid")String uid, @QueryParam("newPassword")String newPassword, @QueryParam("oldPassword")String oldPassword) throws UnsupportedEncodingException, NoSuchAlgorithmException, LDAPSDKException {		
-		if (ldapClient.checkPassword(String.format(dnPattern, LdapClient.escapeDnLiteral(uid)), oldPassword)) {
-			ldapClient.changePassword(uid, PasswordUtils.encryptPassword(newPassword));
-			return createSuccessSatus();
-		} else {
-			return createFailureSatus();
+	public JSONObject setPassword(@QueryParam("uid")String uid, @QueryParam("newPassword")String newPassword, @QueryParam("oldPassword")String oldPassword) {
+		try {
+			if (ldapClient.checkPassword(String.format(dnPattern, LdapClient.escapeDnLiteral(uid)), oldPassword)) {
+				ldapClient.changePassword(uid, PasswordUtils.encryptPassword(newPassword));
+				return createSuccessStatus();
+			} else {
+				return createFailureStatus("Old password doesn't match");
+			}
+		} catch (UnsupportedEncodingException | NoSuchAlgorithmException | LDAPSDKException ex) {
+			return createFailureStatus(ex);
 		}
 		
 	}		
@@ -110,12 +135,20 @@ public class UsersWebService {
 		return new JSONObject().put("status", status);
 	}
 	
-	private JSONObject createSuccessSatus() {
+	private JSONObject createSuccessStatus() {
 		return createStatus("success");
 	}
 	
-	private JSONObject createFailureSatus() {
+	private JSONObject createFailureStatus() {
 		return createStatus("failure");
+	}
+	
+	private JSONObject createFailureStatus(Exception ex) {
+		return createFailureStatus(ex.getMessage()).put("exception", true);
+	}
+	
+	private JSONObject createFailureStatus(String message) {
+		return createFailureStatus().put("message", message);
 	}
 	
 }

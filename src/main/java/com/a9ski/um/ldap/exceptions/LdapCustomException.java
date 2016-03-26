@@ -1,4 +1,4 @@
-package com.a9ski.um.ldap;
+package com.a9ski.um.ldap.exceptions;
 
 import com.unboundid.util.LDAPSDKException;
 

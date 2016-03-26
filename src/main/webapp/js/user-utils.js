@@ -1,5 +1,5 @@
 
-function UserValidator(dialog) {
+function UserUtils(dialog) {
 	
 		// From http://www.whatwg.org/specs/web-apps/current-work/multipage/states-of-the-type-attribute.html#e-mail-state-%28type=email%29
 	this.emailRegex = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
@@ -50,7 +50,8 @@ function UserValidator(dialog) {
 		this.frm.submit();
 	};
 				
-	this.reset = function() {	
+	this.reset = function() {
+		this.uid.prop("readonly", false);
 		this.frm[0].reset();				
 		this.allFields().val("");
 		this.allFields().removeClass("ui-state-error");
@@ -60,7 +61,8 @@ function UserValidator(dialog) {
 		dialog.dialog("close");
 	};
 		
-	this.setUser = function(user) {					
+	this.setUser = function(user) {
+		this.uid.prop("readonly", true);
 		this.uid.val(user.uid);
 		this.firstName.val(user.firstName);
 		this.lastName.val(user.lastName);

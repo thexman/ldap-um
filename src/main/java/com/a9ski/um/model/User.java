@@ -25,8 +25,6 @@ public class User implements Serializable {
 	
 	private final String uid;
 	
-	private String password;
-	
 	public User(String dn, String uid, String firstName, String lastName, String fullName, String displayName, String email) {
 		super();
 		this.dn = dn;
@@ -61,27 +59,38 @@ public class User implements Serializable {
 	public String getUid() {
 		return uid;
 	}
-
-	public String getPassword() {
-		return password;
-	}
-	
-	public void setPassword(String password) {
-		this.password = password;
-	}
 	
 	public String getDn() {
 		return dn;
 	}
 	
 	public JSONObject toJSON() {
-		final JSONObject j = new JSONObject();
-		j.put("uid", uid);
-		j.put("firstName", firstName);
-		j.put("lastName", lastName);
-		j.put("fullName", fullName);
-		j.put("displayName", displayName);
-		j.put("email", email);		
-		return j;
+		final JSONObject json = new JSONObject();
+		json.put("uid", uid);
+		json.put("firstName", firstName);
+		json.put("lastName", lastName);
+		json.put("fullName", fullName);
+		json.put("displayName", displayName);
+		json.put("email", email);		
+		return json;
 	}
+	
+	public static User fromJSON(JSONObject json, String userDnPattern) {		
+		final String uid = json.getString("uid");
+		final String firstName = json.getString("firstName");
+		final String lastName = json.getString("lastName");
+		final String fullName = json.getString("fullName");
+		final String displayName = json.getString("displayName");
+		final String email = json.getString("email");
+		final String dn = String.format(userDnPattern, uid);
+		return new User(dn, uid, firstName, lastName, fullName, displayName, email);
+	}
+
+	@Override
+	public String toString() {
+		return String.format("User [dn=%s, uid=%s, firstName=%s, lastName=%s, fullName=%s, displayName=%s, email=%s]",
+				dn, uid, firstName, lastName, fullName, displayName, email);
+	}
+
+	
 }

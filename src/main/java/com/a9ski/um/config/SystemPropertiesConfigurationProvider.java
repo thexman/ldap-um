@@ -1,5 +1,7 @@
 package com.a9ski.um.config;
 
+import org.apache.commons.lang3.StringUtils;
+
 public class SystemPropertiesConfigurationProvider implements ConfigurationProvider {
 
 	/**
@@ -14,7 +16,7 @@ public class SystemPropertiesConfigurationProvider implements ConfigurationProvi
 
 	@Override
 	public String getLdapHost() {
-		return System.getProperty("ldap-host", "localhost");
+		return System.getProperty("ldap-host", "10.1.52.2");
 	}
 
 	@Override
@@ -24,7 +26,7 @@ public class SystemPropertiesConfigurationProvider implements ConfigurationProvi
 
 	@Override
 	public String getLdapBindDn() {
-		return System.getProperty("ldap-bind-dn", "uid=john.doe,ou=Users,dc=mycompany,dc=com");		
+		return System.getProperty("ldap-bind-dn", "uid=john.doe,ou=users,dc=a9ski,dc=com");		
 	}
 
 	@Override
@@ -34,7 +36,18 @@ public class SystemPropertiesConfigurationProvider implements ConfigurationProvi
 
 	@Override
 	public String getUserBaseDn() {
-		return System.getProperty("ldap-user-base-dn", "ou=people,dc=mycompany,dc=com");
+		return System.getProperty("ldap-user-base-dn", "ou=users,dc=a9ski,dc=com");
+	}
+
+	@Override
+	public String[] getNewUserObjectClasses() {
+		final String objectClasses = System.getProperty("ldap-user-object-classes", "inetOrgPerson,organizationalPerson,person,top");
+		return StringUtils.stripAll(objectClasses.split(","));
+	}
+	
+	@Override
+	public String getUserSearchFilter() {
+		return System.getProperty("ldap-user-search-filter", "(objectClass=inetOrgPerson)");
 	}
 
 }

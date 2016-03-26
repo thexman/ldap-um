@@ -7,27 +7,27 @@
 	<script type="application/javascript" src="jquery-ui/jquery-ui.js"></script>
 	<script type="application/javascript" src="jqgrid/js/jquery.jqGrid.js"></script>
 	<script type="application/javascript" src="jqgrid/js/i18n/grid.locale-en.js"></script>
-	<script type="application/javascript" src="js/user-validator.js"></script>
+	<script type="application/javascript" src="js/user-utils.js"></script>
 	
 	
 	<link rel="stylesheet" type="text/css" media="screen" href="jquery-ui/jquery-ui.css" />
 	<link rel="stylesheet" type="text/css" media="screen" href="jqgrid/css/ui.jqgrid.css" />
 	<link rel="stylesheet" type="text/css" media="screen" href="css/users.css" />
 	<script type="application/javascript">
-		var userValidator = null;
+		var userUtils = null;
 		var selectedUser = null;
 		function editUser(uid) {
 			var user = $("#grid").jqGrid('getRowData', uid);
 			selectedUser = user;
 			console.log(user);
-			userValidator.setUser(user);
+			userUtils.setUser(user);
 			$("#user-dialog").dialog("open"); 
 		}
 	
 		$(document).ready(function () {
 						
 			var dialog = $("#user-dialog");
-			userValidator = new UserValidator(dialog);
+			userUtils = new UserUtils(dialog);
 			
 			
 			var w = $(window).width() - 50;
@@ -70,17 +70,17 @@
 				height: 500,
 				width: 350,
 				modal: true,
-				close: function() { userValidator.reset(); },
+				close: function() { userUtils.reset(); },
 				buttons: { 
-					"Save": function() { userValidator.submit(); },
-					"Cancel": function() { userValidator.closeDialog(); }
+					"Save": function() { userUtils.submit(); },
+					"Cancel": function() { userUtils.closeDialog(); }
 				}
 			});
 			 
 			dialog.find("form").on("submit", function( event ) {				
 				event.preventDefault();
 				var isNew = (selectedUser == null);
-				var user = userValidator.validate(isNew);
+				var user = userUtils.validate(isNew);
 				if (user != null) {
 					var form = $(this);					
 					var url;
@@ -96,12 +96,14 @@
 					// Put the results in a div
 					posting.done(function( data ) {					
 						console.log(data);
+						$("#grid").jqGrid('setGridParam',{datatype:'json'}).trigger('reloadGrid');
 					});
 				}
 			});
 			
-			$("#create-user").click( function() { 
-				userValidator.reset();
+			$("#create-user").click( function() {
+				selectedUser = null;
+				userUtils.reset();
 				$("#user-dialog").dialog("open"); 
 			} );
 		}); 

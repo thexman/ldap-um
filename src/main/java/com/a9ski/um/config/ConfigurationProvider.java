@@ -9,4 +9,7 @@ public interface ConfigurationProvider extends Serializable {
 	public String getLdapBindDn();
 	public String getLdapPassword();
 	public String getUserBaseDn();
+	public String getUserSearchFilter();
+	public String[] getNewUserObjectClasses();
+	
 }
