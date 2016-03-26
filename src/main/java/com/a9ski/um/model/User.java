@@ -1,7 +1,10 @@
 package com.a9ski.um.model;
 
 import java.io.Serializable;
+import java.util.Set;
+import java.util.TreeSet;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class User implements Serializable {
@@ -25,7 +28,9 @@ public class User implements Serializable {
 	
 	private final String uid;
 	
-	public User(String dn, String uid, String firstName, String lastName, String fullName, String displayName, String email) {
+	private final Set<String> groups; 
+	
+	public User(String dn, String uid, String firstName, String lastName, String fullName, String displayName, String email, Set<String> groups) {
 		super();
 		this.dn = dn;
 		this.uid = uid;
@@ -33,7 +38,8 @@ public class User implements Serializable {
 		this.lastName = lastName;
 		this.fullName = fullName;
 		this.displayName = displayName;
-		this.email = email;		
+		this.email = email;
+		this.groups = groups;
 	}
 
 	public String getFullName() {
@@ -64,6 +70,10 @@ public class User implements Serializable {
 		return dn;
 	}
 	
+	public Set<String> getGroups() {
+		return groups;
+	}
+	
 	public JSONObject toJSON() {
 		final JSONObject json = new JSONObject();
 		json.put("uid", uid);
@@ -71,7 +81,10 @@ public class User implements Serializable {
 		json.put("lastName", lastName);
 		json.put("fullName", fullName);
 		json.put("displayName", displayName);
-		json.put("email", email);		
+		json.put("email", email);
+		if (groups != null) {
+			json.put("groups", new JSONArray(groups));
+		}
 		return json;
 	}
 	
@@ -83,13 +96,13 @@ public class User implements Serializable {
 		final String displayName = json.getString("displayName");
 		final String email = json.getString("email");
 		final String dn = String.format(userDnPattern, uid);
-		return new User(dn, uid, firstName, lastName, fullName, displayName, email);
+		return new User(dn, uid, firstName, lastName, fullName, displayName, email, null);
 	}
 
 	@Override
 	public String toString() {
-		return String.format("User [dn=%s, uid=%s, firstName=%s, lastName=%s, fullName=%s, displayName=%s, email=%s]",
-				dn, uid, firstName, lastName, fullName, displayName, email);
+		return String.format("User [dn=%s, uid=%s, firstName=%s, lastName=%s, fullName=%s, displayName=%s, email=%s, groups=%s]",
+				dn, uid, firstName, lastName, fullName, displayName, email, groups);
 	}
 
 	

@@ -2,6 +2,8 @@ package com.a9ski.um.ldap;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
@@ -57,6 +59,10 @@ public class LdapClient {
 	private final String userBaseDn;
 	private final String userSearchFilter;
 	private final String[] userObjectClasses;
+	private final String groupBaseDn;
+	private final String groupSearchFilter;
+	private final String groupAttribute;
+	private final GroupMembershipValue groupMembershipValue;
 	private final SingleServerSet serverSet;
 	
 	
@@ -69,7 +75,7 @@ public class LdapClient {
 		return uid;
 	}
 	
-	public LdapClient(String host, int port, String bindDn, String password, String userBaseDn, String userSearchFilter, String[] newUserObjectClasses) {
+	public LdapClient(String host, int port, String bindDn, String password, String userBaseDn, String userSearchFilter, String[] newUserObjectClasses, String groupBaseDn, String groupSearchFilter, String groupAttribute, GroupMembershipValue groupMembershipValue) {
 		super();
 		this.host = host;
 		this.port = port;
@@ -78,6 +84,10 @@ public class LdapClient {
 		this.userBaseDn = userBaseDn;
 		this.userSearchFilter = userSearchFilter;
 		this.userObjectClasses = newUserObjectClasses;
+		this.groupBaseDn = groupBaseDn;
+		this.groupSearchFilter = groupSearchFilter;
+		this.groupAttribute = groupAttribute;
+		this.groupMembershipValue = groupMembershipValue;
 		this.serverSet = new SingleServerSet(host, port);
 	}
 	
@@ -124,6 +134,11 @@ public class LdapClient {
 				final User user = toUser(e);
 				users.add(user);
 			}
+			
+			for(final User u : users) {
+				u.getGroups().addAll(findUserGroups(ldapConnection, u));
+			}
+			
 			return users;
 		} finally {
 			ldapConnection.close();
@@ -224,7 +239,7 @@ public class LdapClient {
 		final String firstName = e.getAttributeValue(ATTRIBUTE_FIRST_NAME);
 		final String lastName = e.getAttributeValue(ATTRIBUTE_LAST_NAME);
 		
-		final User user = new User(e.getDN(), uid, firstName, lastName, fullName, displayName, email);
+		final User user = new User(e.getDN(), uid, firstName, lastName, fullName, displayName, email, new TreeSet<String>());
 		return user;
 	}
 	
@@ -240,5 +255,37 @@ public class LdapClient {
 			throw ex;
 		}
 		return ldapConnection;
+	}
+	
+	private Set<String> findUserGroups(LDAPConnection ldapConnection, User u) throws LDAPException {
+		final Filter f = Filter.create(createGroupSearchQuery(u));
+		final SearchRequest searchRequest = new SearchRequest(groupBaseDn, SearchScope.SUB, f);
+		final SearchResult r = ldapConnection.search(searchRequest);
+		final Set<String> groups = new TreeSet<String>();
+		for(SearchResultEntry e : r.getSearchEntries()) {
+			groups.add(e.getAttributeValue("cn"));
+		}
+		return groups;
+	}
+
+	private String createGroupSearchQuery(User u) {
+		final StringBuilder sb = new StringBuilder();
+		boolean hasAdditionalSearchCriteria = StringUtils.isNotEmpty(groupSearchFilter);
+		if (hasAdditionalSearchCriteria) {
+			sb.append("(&").append(groupSearchFilter);			
+		}
+		sb.append("(").append(groupAttribute).append("=").append(getGroupMembershipValue(u)).append(")");
+		if (hasAdditionalSearchCriteria) {
+			sb.append(")");
+		}
+		return sb.toString();
+	}
+
+	private String getGroupMembershipValue(User u) {
+		switch(groupMembershipValue) {
+			case DN: return u.getDn();
+			case UID: return u.getUid();			
+		}
+		return u.getDn();
 	}
 }

@@ -17,6 +17,7 @@ import org.json.JSONObject;
 
 import com.a9ski.um.config.ConfigurationProvider;
 import com.a9ski.um.config.ConfigurationProviderFactory;
+import com.a9ski.um.ldap.GroupMembershipValue;
 import com.a9ski.um.ldap.LdapClient;
 import com.a9ski.um.model.User;
 import com.a9ski.um.utils.PasswordUtils;
@@ -39,9 +40,14 @@ public class UsersWebService {
 		final String password = configProvider.getLdapPassword();
 		final String userBaseDn = configProvider.getUserBaseDn();
 		final String userSearchFilter = configProvider.getUserSearchFilter();
-		final String[] userObjectClasses = configProvider.getNewUserObjectClasses(); 
+		final String[] userObjectClasses = configProvider.getNewUserObjectClasses();
+		final String groupBaseDn = configProvider.getGroupBaseDn();
+		final String groupSearchFilter = configProvider.getGroupSearchFilter();
+		final String groupAttribute = configProvider.getGroupAttribute();
+		final GroupMembershipValue groupMembershipValue = configProvider.getGroupMembershipValue(); 
 		
-		ldapClient = new LdapClient(host, port, bindDn, password, userBaseDn, userSearchFilter, userObjectClasses);
+		
+		ldapClient = new LdapClient(host, port, bindDn, password, userBaseDn, userSearchFilter, userObjectClasses, groupBaseDn, groupSearchFilter, groupAttribute, groupMembershipValue);
 		dnPattern = StringUtils.replace(StringUtils.replace(configProvider.getUserDnPattern(), "<user-base-dn>", userBaseDn), "<user-id>", "%s");
 	}
 	

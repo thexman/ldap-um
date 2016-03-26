@@ -2,6 +2,8 @@ package com.a9ski.um.config;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.a9ski.um.ldap.GroupMembershipValue;
+
 public class SystemPropertiesConfigurationProvider implements ConfigurationProvider {
 
 	/**
@@ -48,6 +50,27 @@ public class SystemPropertiesConfigurationProvider implements ConfigurationProvi
 	@Override
 	public String getUserSearchFilter() {
 		return System.getProperty("ldap-user-search-filter", "(objectClass=inetOrgPerson)");
+	}
+
+	@Override
+	public String getGroupBaseDn() {
+		return System.getProperty("ldap-group-base-dn", "ou=groups,dc=a9ski,dc=com");
+	}
+
+	@Override
+	public String getGroupSearchFilter() {
+		return System.getProperty("ldap-group-search-filter", "(objectClass=groupOfUniqueNames)");
+	}
+
+	@Override
+	public String getGroupAttribute() {
+		return System.getProperty("ldap-group-attribute", "uniquemember");
+	}
+
+	@Override
+	public GroupMembershipValue getGroupMembershipValue() {
+		final String value = System.getProperty("ldap-group-membership-value", GroupMembershipValue.DN.name());
+		return GroupMembershipValue.valueOf(value);
 	}
 
 }
