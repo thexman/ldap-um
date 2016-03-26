@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8">
+	<title>User management Web UI</title>
+	<script type="application/javascript" src="jquery/jquery-1.11.3.js"></script>
+	<script type="application/javascript" src="jquery-ui/jquery-ui.js"></script>
+	<script type="application/javascript" src="jqgrid/js/jquery.jqGrid.js"></script>
+	<script type="application/javascript" src="jqgrid/js/i18n/grid.locale-en.js"></script>
+	<script type="application/javascript" src="js/user-validator.js"></script>
+	
+	
+	<link rel="stylesheet" type="text/css" media="screen" href="jquery-ui/jquery-ui.css" />
+	<link rel="stylesheet" type="text/css" media="screen" href="jqgrid/css/ui.jqgrid.css" />
+	<link rel="stylesheet" type="text/css" media="screen" href="css/users.css" />
+	<script type="application/javascript">
+		var userValidator = null;
+		var selectedUser = null;
+		function editUser(uid) {
+			var user = $("#grid").jqGrid('getRowData', uid);
+			selectedUser = user;
+			console.log(user);
+			userValidator.setUser(user);
+			$("#user-dialog").dialog("open"); 
+		}
+	
+		$(document).ready(function () {
+						
+			var dialog = $("#user-dialog");
+			userValidator = new UserValidator(dialog);
+			
+			
+			var w = $(window).width() - 50;
+			var h = $(window).height() - 150;
+			var rowNum = 20;
+			if (h > 1024) {
+				rowNum = 100;
+			} else if (h > 700) {
+				rowNum = 50;
+			}
+			$("#grid").jqGrid({
+				url: 'ws/users/rows',
+				datatype: "json",
+				colModel: [
+					{ label: ' ', name: 'add', width: 16, sortable: false, search: false,
+	  					formatter:function(cellvalue, options, rowObject) {
+	      					return "<span class='ui-icon ui-icon-pencil' onclick='editUser(\"" + rowObject.uid.replace(/"/g, '\\\"') + "\")'></span>";
+	  					}	
+					},				           
+					{ label: 'ID', name: 'uid', width: 150, key:true },
+					{ label: 'First name', name: 'firstName', width: 150 },
+					{ label: 'Last name', name: 'lastName', width: 150 },
+					{ label: 'Full name', name: 'fullName', width: 150 },
+					{ label: 'Display name', name: 'displayName', width: 150 },
+					{ label: 'Email', name: 'email', width: 250 }
+				],
+				viewrecords: true,
+				shrinkToFit: true,
+				//autowidth: true,
+				width: w, 
+				height: h,
+				rowNum: rowNum,
+				rowList: [10, 20, 50, 100, 500],
+				loadonce: true,
+				pager: "#gridPager"
+			});
+			
+			dialog.dialog({
+				autoOpen: false,
+				height: 500,
+				width: 350,
+				modal: true,
+				close: function() { userValidator.reset(); },
+				buttons: { 
+					"Save": function() { userValidator.submit(); },
+					"Cancel": function() { userValidator.closeDialog(); }
+				}
+			});
+			 
+			dialog.find("form").on("submit", function( event ) {				
+				event.preventDefault();
+				var isNew = (selectedUser == null);
+				var user = userValidator.validate(isNew);
+				if (user != null) {
+					var form = $(this);					
+					var url;
+					if (isNew) {
+						url = "ws/users/create";	
+					} else {
+						url = "ws/users/update";
+					}
+					 
+					// Send the data using post
+					var posting = $.post( url, { "user": JSON.stringify(user) } );
+				 
+					// Put the results in a div
+					posting.done(function( data ) {					
+						console.log(data);
+					});
+				}
+			});
+			
+			$("#create-user").click( function() { 
+				userValidator.reset();
+				$("#user-dialog").dialog("open"); 
+			} );
+		}); 
+	</script>
+</head>
+<body>
+	<div id="user-dialog" title="Create new user" class="user-dialog">
+		<p class="validateTips">All form fields are required.</p>
+	
+		<form>
+			<fieldset>
+				<label for="uid">ID</label>
+				<input type="text" name="uid" id="uid" value="" class="text ui-widget-content ui-corner-all">
+			
+				<label for="name">First Name</label>
+				<input type="text" name="firstName" id="first-name" value="John" class="text ui-widget-content ui-corner-all">
+				
+				<label for="name">Last Name</label>
+				<input type="text" name="lastName" id="last-name" value="Doe" class="text ui-widget-content ui-corner-all">
+				
+				<label for="name">Full Name</label>
+				<input type="text" name="fullName" id="full-name" value="Doe" class="text ui-widget-content ui-corner-all">
+				
+				<label for="name">Display Name</label>
+				<input type="text" name="displayName" id="display-name" value="Doe" class="text ui-widget-content ui-corner-all">
+				
+				<label for="email">Email</label>
+				<input type="text" name="email" id="email" value="john@doe.com" class="text ui-widget-content ui-corner-all">
+				
+				<label for="password">Password</label>
+				<input type="password" name="password" id="password" value="xxxxxxx" class="text ui-widget-content ui-corner-all">
+				
+				<!-- Allow form submission with keyboard without duplicating the dialog button -->
+				<input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+			</fieldset>
+		</form>
+	</div>
+
+
+	<table id="grid"></table>
+    <div id="gridPager"></div>
+    <button id="create-user">Create new user</button>
+</body>
+</html>

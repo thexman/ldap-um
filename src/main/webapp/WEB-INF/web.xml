@@ -1,0 +1,85 @@
+<web-app 
+	xmlns="http://java.sun.com/xml/ns/javaee" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+	version="3.0">
+	
+	<servlet>
+		<servlet-name>rest-servlet</servlet-name>
+		<servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
+		<!-- Register resources and providers under com.vogella.jersey.first package. -->
+		<init-param>
+			<param-name>jersey.config.server.provider.packages</param-name>
+			<param-value>com.a9ski.um.ws</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>rest-servlet</servlet-name>
+		<url-pattern>/ws/*</url-pattern>
+	</servlet-mapping>
+
+	<session-config>
+		<session-timeout>30</session-timeout>
+	</session-config>
+	<welcome-file-list>
+		<welcome-file>index.html</welcome-file>
+	</welcome-file-list>
+	
+	
+	<!-- login configuration -->
+	<!-- login-config>
+	    <auth-method>FORM</auth-method>	    
+	    <realm-name>umRealm</realm-name>
+	    <form-login-config>
+	        <form-login-page>/login.xhtml</form-login-page>
+	        <form-error-page>/errorLogin.xhtml</form-error-page>
+	    </form-login-config>
+	</login-config-->
+	
+	<!-- define a constraint for any url of the application, for the user to be any of the access role(s) -->
+	<!-- security-constraint>
+        <display-name>authenticated-user-constraint</display-name>
+        <web-resource-collection>
+            <web-resource-name>dynamic-resources</web-resource-name>
+            <description/>
+            <url-pattern>/*</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <description>Only authenticated users are authorized</description>
+            <role-name>UmAdmin</role-name>
+			<role-name>UmUser</role-name>
+        </auth-constraint>
+    </security-constraint>
+    	    
+	<security-constraint>
+        <display-name>anonymous-user-constraint</display-name>
+        <web-resource-collection>
+            <web-resource-name>javascript-resources</web-resource-name>
+            <description/>
+            <url-pattern>/js/*</url-pattern>
+        </web-resource-collection>
+        <web-resource-collection>
+            <web-resource-name>image-resources</web-resource-name>
+            <description/>
+            <url-pattern>/images/*</url-pattern>
+        </web-resource-collection>        
+        <web-resource-collection>
+            <web-resource-name>javascript-resources</web-resource-name>
+            <description/>
+            <url-pattern>/ws/*</url-pattern>
+        </web-resource-collection>
+    </security-constraint-->
+    
+	<!-- security roles for the app -->
+	<!-- security-role>
+		<description>Users with administration privileges</description>
+		<role-name>UmAdmin</role-name>		
+	</security-role>   		
+	
+	<security-role>
+		<description>Users with standard privileges</description>		
+		<role-name>UmUser</role-name>
+	</security-role-->
+	
+</web-app>
