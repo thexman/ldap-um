@@ -11,11 +11,12 @@ function UserUtils(dialog) {
 	this.displayName = dialog.find("#display-name");
 	this.fullName = dialog.find("#full-name");
 	this.email = dialog.find("#email");
+	this.groups = dialog.find("#groups");
 	this.password = dialog.find("#password"); 		
 	this.tips = dialog.find(".validateTips");
 
 	this.allFields = function() {
-		return $([]).add(this.uid).add(this.firstName).add(this.lastName).add(this.displayName).add(this.fullName).add(this.email).add(this.password);
+		return $([]).add(this.uid).add(this.firstName).add(this.lastName).add(this.displayName).add(this.fullName).add(this.email).add(this.groups).add(this.password);
 	};
 		
 	this.updateTips = function (t) {
@@ -69,6 +70,7 @@ function UserUtils(dialog) {
 		this.displayName.val(user.displayName);
 		this.fullName.val(user.fullName);
 		this.email.val(user.email);
+		this.groups.val(user.groups);
 		this.password.val("");
 	};
 	
@@ -99,6 +101,7 @@ function UserUtils(dialog) {
 					"fullName": this.fullName.val(),
 					"displayName": this.displayName.val(),
 					"email": this.email.val(),
+					"groups": this.groups.val(),
 					"password": this.password.val()
 			};
 			this.closeDialog();

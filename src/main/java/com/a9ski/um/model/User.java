@@ -1,23 +1,19 @@
 package com.a9ski.um.model;
 
-import java.io.Serializable;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class User implements Serializable {
+public class User extends LdapEntity {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -4265892542568338231L;
 
-	private final String dn;
-	
-	private final String fullName;
-	
 	private final String firstName;
 	
 	private final String lastName;
@@ -31,19 +27,17 @@ public class User implements Serializable {
 	private final Set<String> groups; 
 	
 	public User(String dn, String uid, String firstName, String lastName, String fullName, String displayName, String email, Set<String> groups) {
-		super();
-		this.dn = dn;
+		super(dn, fullName);
 		this.uid = uid;
 		this.firstName = firstName;
 		this.lastName = lastName;
-		this.fullName = fullName;
 		this.displayName = displayName;
 		this.email = email;
 		this.groups = groups;
 	}
 
 	public String getFullName() {
-		return fullName;
+		return getCn();
 	}
 
 	public String getFirstName() {
@@ -66,10 +60,6 @@ public class User implements Serializable {
 		return uid;
 	}
 	
-	public String getDn() {
-		return dn;
-	}
-	
 	public Set<String> getGroups() {
 		return groups;
 	}
@@ -79,11 +69,11 @@ public class User implements Serializable {
 		json.put("uid", uid);
 		json.put("firstName", firstName);
 		json.put("lastName", lastName);
-		json.put("fullName", fullName);
+		json.put("fullName", getFullName());
 		json.put("displayName", displayName);
 		json.put("email", email);
 		if (groups != null) {
-			json.put("groups", new JSONArray(groups));
+			json.put("groups", StringUtils.join(groups, "; "));
 		}
 		return json;
 	}
@@ -96,13 +86,23 @@ public class User implements Serializable {
 		final String displayName = json.getString("displayName");
 		final String email = json.getString("email");
 		final String dn = String.format(userDnPattern, uid);
-		return new User(dn, uid, firstName, lastName, fullName, displayName, email, null);
+		final String groupsStr = json.getString("groups");
+		final Set<String> groups = new TreeSet<>(); 
+		if (groupsStr != null) {
+			final String[] groupNames = groupsStr.split(";");
+			for(final String groupName : groupNames) {
+				if (StringUtils.isNotBlank(groupName)) {
+					groups.add(groupName.trim());
+				}
+			}
+		}
+		return new User(dn, uid, firstName, lastName, fullName, displayName, email, groups);
 	}
 
 	@Override
 	public String toString() {
 		return String.format("User [dn=%s, uid=%s, firstName=%s, lastName=%s, fullName=%s, displayName=%s, email=%s, groups=%s]",
-				dn, uid, firstName, lastName, fullName, displayName, email, groups);
+				getDn(), uid, firstName, lastName, getCn(), displayName, email, groups);
 	}
 
 	

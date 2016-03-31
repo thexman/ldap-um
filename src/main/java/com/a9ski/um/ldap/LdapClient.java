@@ -10,6 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.a9ski.um.ldap.exceptions.LdapCustomException;
 import com.a9ski.um.ldap.exceptions.LdapUserExistsException;
+import com.a9ski.um.model.Group;
 import com.a9ski.um.model.User;
 import com.unboundid.ldap.sdk.AddRequest;
 import com.unboundid.ldap.sdk.Attribute;
@@ -48,6 +49,8 @@ public class LdapClient {
 	private static final String ATTRIBUTE_PASSWORD = "userpassword";
 	
 	private static final String ATTRIBUTE_OBJECT_CLASS = "objectclass";
+	
+	private static final String ATTRIBUTE_GROUP_NAME = "cn";
 	
 	private final static String SPECIAL_CHARS = ",+\"\\<>;\r\n=/";
 	
@@ -177,6 +180,21 @@ public class LdapClient {
 			ldapConnection.close();
 		}
 	}
+	
+	public Set<String> searchGroupNames(String search) throws LDAPException {
+		return getGroupNames(searchGroups(search));
+	}
+		
+	
+	public List<Group> searchGroups(String search) throws LDAPException {
+		final LDAPConnection ldapConnection = getBindedConnection();
+		try {
+			final Filter f = Filter.create(createGroupSearchQuery(search));
+			return findGroups(ldapConnection, f);
+		} finally {
+			ldapConnection.close();
+		}
+	}
 
 	private void createUser(final LDAPConnection ldapConnection, User u) throws LDAPException {
 		final String dn = String.format("uid=%s,%s", u.getUid(), userBaseDn);
@@ -243,6 +261,12 @@ public class LdapClient {
 		return user;
 	}
 	
+	private Group toGroup(ReadOnlyEntry e) {
+		final String name = e.getAttributeValue(ATTRIBUTE_GROUP_NAME);
+		final Group g = new Group(e.getDN(), StringUtils.defaultString(name, ""));
+		return g;
+	}
+	
 	private LDAPConnection getBindedConnection() throws LDAPException {
 		final BindRequest bindRequest = new SimpleBindRequest(bindDn, password);
 		final LDAPConnection ldapConnection = serverSet.getConnection();
@@ -259,11 +283,24 @@ public class LdapClient {
 	
 	private Set<String> findUserGroups(LDAPConnection ldapConnection, User u) throws LDAPException {
 		final Filter f = Filter.create(createGroupSearchQuery(u));
+		final List<Group> userGroups = findGroups(ldapConnection, f);
+		return getGroupNames(userGroups);
+	}
+
+	private Set<String> getGroupNames(final List<Group> groups) {
+		final Set<String> groupNames = new TreeSet<String>();
+		for(final Group g : groups) {
+			groupNames.add(g.getGroupName());
+		}
+		return groupNames;
+	}
+
+	private List<Group> findGroups(LDAPConnection ldapConnection, final Filter f) throws LDAPSearchException {
 		final SearchRequest searchRequest = new SearchRequest(groupBaseDn, SearchScope.SUB, f);
 		final SearchResult r = ldapConnection.search(searchRequest);
-		final Set<String> groups = new TreeSet<String>();
+		final List<Group> groups = new ArrayList<>();
 		for(SearchResultEntry e : r.getSearchEntries()) {
-			groups.add(e.getAttributeValue("cn"));
+			groups.add(toGroup(e));
 		}
 		return groups;
 	}
@@ -280,6 +317,20 @@ public class LdapClient {
 		}
 		return sb.toString();
 	}
+	
+	private String createGroupSearchQuery(String groupName) {
+		final StringBuilder sb = new StringBuilder();
+		boolean hasAdditionalSearchCriteria = StringUtils.isNotEmpty(groupSearchFilter);
+		if (hasAdditionalSearchCriteria) {
+			sb.append("(&").append(groupSearchFilter);			
+		}
+		sb.append("(cn=*").append(groupName).append("*)");
+		if (hasAdditionalSearchCriteria) {
+			sb.append(")");
+		}
+		return sb.toString();
+	}
+	
 
 	private String getGroupMembershipValue(User u) {
 		switch(groupMembershipValue) {

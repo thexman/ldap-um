@@ -2,6 +2,7 @@ package com.a9ski.um.ws;
 
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Set;
 
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -97,10 +98,23 @@ public class UsersWebService {
 				ldapClient.changePassword(newUser.getUid(), password);
 			}
 			return createSuccessStatus().put("user", newUser.toJSON());
-		} catch (LDAPSDKException ex) {
+		} catch (final LDAPSDKException ex) {
 			return createFailureStatus(ex);
 		}
 	}
+	
+	@Path("searchGroups")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	public JSONObject searchGroups(@QueryParam("search")String search) {
+		try {
+			final Set<String> groups = ldapClient.searchGroupNames(search);
+			return createSuccessStatus().put("groups", new JSONArray(groups));
+		} catch (final LDAPException ex) {
+			return createFailureStatus(ex);
+		}
+	}
+	
 	
 	@Path("update")
 	@POST

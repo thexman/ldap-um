@@ -23,6 +23,14 @@
 			userUtils.setUser(user);
 			$("#user-dialog").dialog("open"); 
 		}
+		
+		function split( val ) {
+			return val.split( /;\s*/ );
+		}
+		
+		function extractLast( term ) {
+  			return split( term ).pop();
+		}
 	
 		$(document).ready(function () {
 						
@@ -107,6 +115,44 @@
 				userUtils.reset();
 				$("#user-dialog").dialog("open"); 
 			} );
+			
+			$("#groups")
+				// don't navigate away from the field on tab when selecting an item
+				.bind( "keydown", function( event ) {
+					if (event.keyCode === $.ui.keyCode.TAB && $(this).autocomplete("instance").menu.active) {
+						event.preventDefault();
+					}
+				})
+				.autocomplete({
+					source: function(request, response) {
+						$.getJSON("ws/users/searchGroups", { search : extractLast(request.term) }, function(data) {
+							response(data.groups);
+						});
+					},
+					search: function() {
+						// custom minLength
+						var term = extractLast(this.value);
+						if (term.length < 2) {
+							return false;
+						}
+					},
+					focus: function() {
+						// prevent value inserted on focus
+						return false;
+					},
+					select: function(event, ui) {
+						var terms = split( this.value );
+						// remove the current input
+						terms.pop();
+						// add the selected item
+						terms.push(ui.item.value);
+						// add placeholder to get the comma-and-space at the end
+						terms.push("");
+						this.value = terms.join("; ");
+						return false;
+					}
+		      });
+			
 		}); 
 	</script>
 </head>
@@ -136,6 +182,9 @@
 				
 				<label for="password">Password</label>
 				<input type="password" name="password" id="password" value="xxxxxxx" class="text ui-widget-content ui-corner-all">
+				
+				<label for="groups">Groups</label>
+				<input type="text" name="groups" id="groups" class="text ui-widget-content ui-corner-all">
 				
 				<!-- Allow form submission with keyboard without duplicating the dialog button -->
 				<input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
