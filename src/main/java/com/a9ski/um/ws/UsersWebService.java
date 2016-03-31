@@ -15,6 +15,8 @@ import javax.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.a9ski.um.config.ConfigurationProvider;
 import com.a9ski.um.config.ConfigurationProviderFactory;
@@ -28,6 +30,8 @@ import com.unboundid.util.LDAPSDKException;
 @Path("/users")
 public class UsersWebService {
 
+	private final Logger logger = LoggerFactory.getLogger(UsersWebService.class); 
+	
 	private final ConfigurationProvider configProvider = ConfigurationProviderFactory.createConfigurationProvider();
 	private final String dnPattern;	
 	private final LdapClient ldapClient;
@@ -164,6 +168,7 @@ public class UsersWebService {
 	}
 	
 	private JSONObject createFailureStatus(Exception ex) {
+		logger.error("Failure status", ex);
 		return createFailureStatus(ex.getMessage()).put("exception", true);
 	}
 	

@@ -1,11 +1,15 @@
 package com.a9ski.um.ldap;
 
+import static com.a9ski.um.utils.DeltaUtils.calculateDeltaAdded;
+import static com.a9ski.um.utils.DeltaUtils.calculateDeltaDeleted;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.a9ski.um.ldap.exceptions.LdapCustomException;
@@ -134,7 +138,7 @@ public class LdapClient {
 			final SearchRequest searchRequest = new SearchRequest(userBaseDn, SearchScope.SUB, f);
 			final SearchResult r = ldapConnection.search(searchRequest);			
 			for(SearchResultEntry e : r.getSearchEntries()) {
-				final User user = toUser(e);
+				final User user = toUser(ldapConnection, e);
 				users.add(user);
 			}
 			
@@ -161,11 +165,19 @@ public class LdapClient {
 			changeAttribute(ldapConnection, dn, ATTRIBUTE_EMAIL, u.getEmail());
 			changeAttribute(ldapConnection, dn, ATTRIBUTE_FIRST_NAME, u.getFirstName());
 			changeAttribute(ldapConnection, dn, ATTRIBUTE_LAST_NAME, u.getLastName());
+			
+			final Set<String> groupsAdded = calculateDeltaAdded(existingUser.getGroups(), u.getGroups());
+			addUserToGroups(ldapConnection, u, groupsAdded);
+			
+			final Set<String> groupsDeleted = calculateDeltaDeleted(existingUser.getGroups(), u.getGroups());
+			deletedUserFromGroups(ldapConnection, u, groupsDeleted);
+			
 			return findUserByUid(ldapConnection, u.getUid());
 		} finally {
 			ldapConnection.close();
 		}
 	}
+
 	
 	public User createUser(User u) throws LDAPSDKException {
 		final LDAPConnection ldapConnection = getBindedConnection();				
@@ -195,7 +207,41 @@ public class LdapClient {
 			ldapConnection.close();
 		}
 	}
+	
+	public Group findGroup(String groupName) throws LDAPException {
+		final LDAPConnection ldapConnection = getBindedConnection();
+		try {
+			final Filter f = Filter.create(createGroupExactMatchQuery(groupName));
+			final List<Group> groups = findGroups(ldapConnection, f);
+			if (CollectionUtils.isNotEmpty(groups)) {
+				return groups.get(0);
+			} else {
+				return null;
+			}
+		} finally {
+			ldapConnection.close();
+		}
+	}
 
+	private void addUserToGroups(final LDAPConnection ldapConnection, User u, final Set<String> groups)	throws LDAPException {
+		if (CollectionUtils.isNotEmpty(groups)) {
+			for(final String groupName : groups) {
+				final Group g = findGroup(groupName);
+				addAttribute(ldapConnection, g.getDn(), groupAttribute, getGroupMembershipValue(u));
+			}
+		}
+	}
+	
+	private void deletedUserFromGroups(final LDAPConnection ldapConnection, User u, final Set<String> groups)	throws LDAPException {
+		if (CollectionUtils.isNotEmpty(groups)) {
+			for(final String groupName : groups) {
+				final Group g = findGroup(groupName);
+				deleteAttribute(ldapConnection, g.getDn(), groupAttribute, getGroupMembershipValue(u));
+			}
+		}
+	}
+
+	
 	private void createUser(final LDAPConnection ldapConnection, User u) throws LDAPException {
 		final String dn = String.format("uid=%s,%s", u.getUid(), userBaseDn);
 		final List<Attribute> attributes = new ArrayList<>();
@@ -209,6 +255,8 @@ public class LdapClient {
 		attributes.add(new Attribute(ATTRIBUTE_OBJECT_CLASS, userObjectClasses));
 		final AddRequest addRequest = new AddRequest(dn, attributes);  
 		ldapConnection.add(addRequest);
+		
+		addUserToGroups(ldapConnection, u, u.getGroups());
 	}
 	
 	private void changeUserAttribute(String uid, String attribute, String value) throws LDAPSDKException {		
@@ -234,6 +282,18 @@ public class LdapClient {
 		ldapConnection.modify(modifyRequest);
 	}
 	
+	private void addAttribute(final LDAPConnection ldapConnection, final String dn, String attribute, String value) 	throws LDAPException {
+		final Modification mod = new Modification(ModificationType.ADD, attribute, value); 
+		final ModifyRequest modifyRequest = new ModifyRequest(dn, mod);
+		ldapConnection.modify(modifyRequest);
+	}
+	
+	private void deleteAttribute(final LDAPConnection ldapConnection, final String dn, String attribute, String value) 	throws LDAPException {
+		final Modification mod = new Modification(ModificationType.DELETE, attribute, value); 
+		final ModifyRequest modifyRequest = new ModifyRequest(dn, mod);
+		ldapConnection.modify(modifyRequest);
+	}
+	
 	private User findUserByUid(final LDAPConnection ldapConnection, String uid) throws LDAPException, LDAPSearchException, LdapCustomException {
 		final Filter f = Filter.create("(&(uid=" + Filter.encodeValue(uid) + ")" + userSearchFilter + ")");
 		final SearchRequest searchRequest = new SearchRequest(userBaseDn, SearchScope.SUB, f);
@@ -244,12 +304,12 @@ public class LdapClient {
 		}
 		User u = null;
 		if (results.size() > 0) {
-			u = toUser(results.get(0));
+			u = toUser(ldapConnection, results.get(0));
 		}
 		return u;
 	}
 
-	private User toUser(final ReadOnlyEntry e) {
+	private User toUser(LDAPConnection ldapConnection, final ReadOnlyEntry e) throws LDAPException {
 		final String fullName = e.getAttributeValue(ATTRIBUTE_FULL_NAME);
 		final String displayName = e.getAttributeValue(ATTRIBUTE_DISPLAY_NAME);
 		final String email = e.getAttributeValue(ATTRIBUTE_EMAIL);
@@ -258,6 +318,7 @@ public class LdapClient {
 		final String lastName = e.getAttributeValue(ATTRIBUTE_LAST_NAME);
 		
 		final User user = new User(e.getDN(), uid, firstName, lastName, fullName, displayName, email, new TreeSet<String>());
+		user.getGroups().addAll(findUserGroups(ldapConnection, user));
 		return user;
 	}
 	
@@ -331,6 +392,19 @@ public class LdapClient {
 		return sb.toString();
 	}
 	
+	private String createGroupExactMatchQuery(String groupName) {
+		final StringBuilder sb = new StringBuilder();
+		boolean hasAdditionalSearchCriteria = StringUtils.isNotEmpty(groupSearchFilter);
+		if (hasAdditionalSearchCriteria) {
+			sb.append("(&").append(groupSearchFilter);			
+		}
+		sb.append("(cn=").append(groupName).append(")");
+		if (hasAdditionalSearchCriteria) {
+			sb.append(")");
+		}
+		return sb.toString();
+	}
+	
 
 	private String getGroupMembershipValue(User u) {
 		switch(groupMembershipValue) {
@@ -339,4 +413,6 @@ public class LdapClient {
 		}
 		return u.getDn();
 	}
+	
+	
 }
