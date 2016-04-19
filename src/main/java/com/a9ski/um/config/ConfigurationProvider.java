@@ -17,5 +17,6 @@ public interface ConfigurationProvider extends Serializable {
 	public String getGroupSearchFilter();
 	public String getGroupAttribute();
 	public GroupMembershipValue getGroupMembershipValue();
+	public String getGroupDnPattern();
 	
 }

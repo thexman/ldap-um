@@ -15,6 +15,11 @@ public class SystemPropertiesConfigurationProvider implements ConfigurationProvi
 	public String getUserDnPattern() {
 		return System.getProperty("ldap-user-dn-pattern", "uid=<user-id>,<user-base-dn>");		
 	}
+	
+	@Override
+	public String getGroupDnPattern() {
+		return System.getProperty("ldap-group-dn-pattern", "uid=<group-id>,<group-base-dn>");		
+	}
 
 	@Override
 	public String getLdapHost() {

@@ -121,24 +121,34 @@ public class LdapClient {
 	public User findUserByUid(String uid) throws LDAPSDKException {
 		final LDAPConnection ldapConnection = getBindedConnection();				
 		try {
-			return findUserByUid(ldapConnection, uid);
+			return findUserByUid(ldapConnection, uid, true);
 		} finally {
 			ldapConnection.close();
 		}
 	}
+	
+	public List<User> searchUsers(String search) throws LDAPSDKException {
+		final String uid = "(" + ATTRIBUTE_UID + "=*" + Filter.encodeValue(search) + "*)";
+		final String displayName = "(" + ATTRIBUTE_DISPLAY_NAME + "=*" + Filter.encodeValue(search) + "*)";
+		final String fullName = "(" + ATTRIBUTE_FULL_NAME + "=*" + Filter.encodeValue(search) + "*)";
+		final String or = "(|" + uid + displayName + fullName + ")";
+		final String query = "(&" + or + userSearchFilter + ")";
+		return findUsers(Filter.create(query));
+	}
 
-	public List<User> listAllUsers() throws LDAPException {
+	public List<User> listAllUsers() throws LDAPException {		
+		return findUsers(Filter.create(userSearchFilter));		
+	}
+
+	private List<User> findUsers(final Filter filter ) throws LDAPException, LDAPSearchException {
 		final List<User> users = new ArrayList<>();
-		
 		final LDAPConnection ldapConnection = getBindedConnection();		
-				
-//		final Filter f = Filter.create("(&(objectClass=organizationalPerson))");		
-		final Filter f = Filter.create(userSearchFilter);
+		
 		try {			
-			final SearchRequest searchRequest = new SearchRequest(userBaseDn, SearchScope.SUB, f);
+			final SearchRequest searchRequest = new SearchRequest(userBaseDn, SearchScope.SUB, filter);
 			final SearchResult r = ldapConnection.search(searchRequest);			
 			for(SearchResultEntry e : r.getSearchEntries()) {
-				final User user = toUser(ldapConnection, e);
+				final User user = toUser(ldapConnection, e, true);
 				users.add(user);
 			}
 			
@@ -149,13 +159,13 @@ public class LdapClient {
 			return users;
 		} finally {
 			ldapConnection.close();
-		}		
+		}
 	}
 	
 	public User updateUser(User u) throws LDAPSDKException {
 		final LDAPConnection ldapConnection = getBindedConnection();				
 		try {
-			final User existingUser = findUserByUid(ldapConnection, u.getUid());
+			final User existingUser = findUserByUid(ldapConnection, u.getUid(), true);
 			if (existingUser == null) {
 				throw new LdapCustomException("User doesn't exists");
 			}
@@ -172,7 +182,7 @@ public class LdapClient {
 			final Set<String> groupsDeleted = calculateDeltaDeleted(existingUser.getGroups(), u.getGroups());
 			deletedUserFromGroups(ldapConnection, u, groupsDeleted);
 			
-			return findUserByUid(ldapConnection, u.getUid());
+			return findUserByUid(ldapConnection, u.getUid(), true);
 		} finally {
 			ldapConnection.close();
 		}
@@ -182,12 +192,12 @@ public class LdapClient {
 	public User createUser(User u) throws LDAPSDKException {
 		final LDAPConnection ldapConnection = getBindedConnection();				
 		try {
-			final User existingUser = findUserByUid(ldapConnection, u.getUid());
+			final User existingUser = findUserByUid(ldapConnection, u.getUid(), true);
 			if (existingUser != null) {				
 				throw new LdapUserExistsException(String.format("User with '%s' already exists", u.getUid()));
 			}
 			createUser(ldapConnection, u);
-			return findUserByUid(ldapConnection, u.getUid());
+			return findUserByUid(ldapConnection, u.getUid(), true);
 		} finally {
 			ldapConnection.close();
 		}
@@ -201,11 +211,31 @@ public class LdapClient {
 	public List<Group> searchGroups(String search) throws LDAPException {
 		final LDAPConnection ldapConnection = getBindedConnection();
 		try {
-			final Filter f = Filter.create(createGroupSearchQuery(search));
+			final Filter f = Filter.create(createGroupSearchQuery(groupSearchFilter));
 			return findGroups(ldapConnection, f);
 		} finally {
 			ldapConnection.close();
 		}
+	}
+	
+	public List<Group> listAllGroups() throws LDAPException, LdapCustomException {
+		final List<Group> groups = new ArrayList<>();
+		
+		final LDAPConnection ldapConnection = getBindedConnection();		
+				
+		final Filter f = Filter.create(groupSearchFilter);
+		try {			
+			final SearchRequest searchRequest = new SearchRequest(groupBaseDn, SearchScope.SUB, f);
+			final SearchResult r = ldapConnection.search(searchRequest);			
+			for(SearchResultEntry e : r.getSearchEntries()) {
+				final Group group = toGroup(ldapConnection, e);
+				groups.add(group);
+			}
+			
+			return groups;
+		} finally {
+			ldapConnection.close();
+		}		
 	}
 	
 	public Group findGroup(String groupName) throws LDAPException {
@@ -269,7 +299,7 @@ public class LdapClient {
 	}
 
 	private void changeUserAttribute(final LDAPConnection ldapConnection, String uid, String attribute, String value) throws LDAPException, LDAPSearchException, LdapCustomException {
-		final User user = findUserByUid(ldapConnection, uid);
+		final User user = findUserByUid(ldapConnection, uid, true);
 		if (user != null) {
 			final String dn = user.getDn();
 			changeAttribute(ldapConnection, dn, attribute, value);
@@ -294,7 +324,7 @@ public class LdapClient {
 		ldapConnection.modify(modifyRequest);
 	}
 	
-	private User findUserByUid(final LDAPConnection ldapConnection, String uid) throws LDAPException, LDAPSearchException, LdapCustomException {
+	private User findUserByUid(final LDAPConnection ldapConnection, String uid, boolean loadUserGroups) throws LDAPException, LDAPSearchException, LdapCustomException {
 		final Filter f = Filter.create("(&(uid=" + Filter.encodeValue(uid) + ")" + userSearchFilter + ")");
 		final SearchRequest searchRequest = new SearchRequest(userBaseDn, SearchScope.SUB, f);
 		final SearchResult r = ldapConnection.search(searchRequest);
@@ -304,12 +334,18 @@ public class LdapClient {
 		}
 		User u = null;
 		if (results.size() > 0) {
-			u = toUser(ldapConnection, results.get(0));
+			u = toUser(ldapConnection, results.get(0), loadUserGroups);
 		}
 		return u;
 	}
+	
+	private User findUserByDn(final LDAPConnection ldapConnection, String dn, boolean loadUserGroups) throws LDAPException, LDAPSearchException, LdapCustomException {
+		final SearchResultEntry e = ldapConnection.getEntry(dn);
+		final User u = toUser(ldapConnection, e, loadUserGroups);
+		return u;
+	}
 
-	private User toUser(LDAPConnection ldapConnection, final ReadOnlyEntry e) throws LDAPException {
+	private User toUser(LDAPConnection ldapConnection, final ReadOnlyEntry e, boolean loadUserGroups) throws LDAPException {
 		final String fullName = e.getAttributeValue(ATTRIBUTE_FULL_NAME);
 		final String displayName = e.getAttributeValue(ATTRIBUTE_DISPLAY_NAME);
 		final String email = e.getAttributeValue(ATTRIBUTE_EMAIL);
@@ -318,8 +354,26 @@ public class LdapClient {
 		final String lastName = e.getAttributeValue(ATTRIBUTE_LAST_NAME);
 		
 		final User user = new User(e.getDN(), uid, firstName, lastName, fullName, displayName, email, new TreeSet<String>());
-		user.getGroups().addAll(findUserGroups(ldapConnection, user));
+		if (loadUserGroups) {
+			user.getGroups().addAll(findUserGroups(ldapConnection, user));
+		}
 		return user;
+	}
+	
+	private Group toGroup(LDAPConnection ldapConnection, final ReadOnlyEntry e) throws LDAPException, LdapCustomException {
+		final List<User> users = new ArrayList<>();
+		final String[] members = e.getAttributeValues(groupAttribute);
+		for (final String member : members) {
+			switch (groupMembershipValue) {
+				case DN: users.add(findUserByDn(ldapConnection, member, false)); break;
+				case UID: users.add(findUserByUid(ldapConnection, member, false)); break;
+			}
+		}
+		
+		final String name = e.getAttributeValue(ATTRIBUTE_GROUP_NAME);
+		final Group group = new Group(e.getDN(), StringUtils.defaultString(name, ""), users);
+
+		return group;
 	}
 	
 	private Group toGroup(ReadOnlyEntry e) {

@@ -79,15 +79,15 @@ function UserUtils(dialog) {
 		var valid = true;
 		this.allFields().removeClass("ui-state-error");
 	
-		valid = valid && this.checkLength(this.uid, "ID", 2, 16);
-		valid = valid && this.checkLength(this.firstName, "First name", 1, 16);
-		valid = valid && this.checkLength(this.lastName, "Last name", 1, 16);
-		valid = valid && this.checkLength(this.fullName, "Full name", 2, 16);
-		valid = valid && this.checkLength(this.displayName, "Display name", 2, 16);			
-		valid = valid && this.checkLength(this.email, "Email", 6, 80);
+		valid = valid && this.checkLength(this.uid, "ID", 2, 100);
+		valid = valid && this.checkLength(this.firstName, "First name", 1, 50);
+		valid = valid && this.checkLength(this.lastName, "Last name", 1, 50);
+		valid = valid && this.checkLength(this.fullName, "Full name", 2, 100);
+		valid = valid && this.checkLength(this.displayName, "Display name", 2, 100);			
+		valid = valid && this.checkLength(this.email, "Email", 6, 100);
 		
 		if (this.password.val().length > 0 || isNewUser) {
-			valid = valid && this.checkLength(this.password, "Password", 5, 16);
+			valid = valid && this.checkLength(this.password, "Password", 5, 50);
 		}
 	
 		valid = valid && this.checkRegexp(this.uid, this.idRegEx, "ID may consist of a-z, 0-9, underscores, dot and must begin with a letter.");

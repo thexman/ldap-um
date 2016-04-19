@@ -7,21 +7,21 @@
 	<script type="application/javascript" src="jquery-ui/jquery-ui.js"></script>
 	<script type="application/javascript" src="jqgrid/js/jquery.jqGrid.js"></script>
 	<script type="application/javascript" src="jqgrid/js/i18n/grid.locale-en.js"></script>
-	<script type="application/javascript" src="js/user-utils.js"></script>
+	<script type="application/javascript" src="js/group-utils.js"></script>
 	
 	
 	<link rel="stylesheet" type="text/css" media="screen" href="jquery-ui/jquery-ui.css" />
 	<link rel="stylesheet" type="text/css" media="screen" href="jqgrid/css/ui.jqgrid.css" />
 	<link rel="stylesheet" type="text/css" media="screen" href="css/main.css" />
 	<script type="application/javascript">
-		var userUtils = null;
-		var selectedUser = null;
-		function editUser(uid) {
-			var user = $("#users-grid").jqGrid('getRowData', uid);
-			selectedUser = user;
-			console.log(user);
-			userUtils.setUser(user);
-			$("#user-dialog").dialog("open"); 
+		var groupUtils = null;
+		var selectedGroup = null;
+		function editGroup(uid) {
+			var group = $("#groups-grid").jqGrid('getRowData', uid);
+			selectedGroup = group;
+			console.log(group);
+			groupUtils.setGroup(group);
+			$("#group-dialog").dialog("open"); 
 		}
 		
 		function split( val ) {
@@ -34,8 +34,8 @@
 	
 		$(document).ready(function () {
 						
-			var dialog = $("#user-dialog");
-			userUtils = new UserUtils(dialog);
+			var dialog = $("#group-dialog");
+			groupUtils = new GroupUtils(dialog);
 			
 			
 			var w = $(window).width() - 50;
@@ -46,22 +46,25 @@
 			} else if (h > 700) {
 				rowNum = 50;
 			}
-			$("#users-grid").jqGrid({
-				url: 'ws/users/rows',
+			$("#groups-grid").jqGrid({
+				url: 'ws/groups/rows',
 				datatype: "json",
 				colModel: [
 					{ label: ' ', name: 'add', width: 16, sortable: false, search: false,
 	  					formatter:function(cellvalue, options, rowObject) {
-	      					return "<span class='ui-icon ui-icon-pencil' onclick='editUser(\"" + rowObject.uid.replace(/"/g, '\\\"') + "\")'></span>";
+	      					return "<span class='ui-icon ui-icon-pencil' onclick='editGroup(\"" + rowObject.name.replace(/"/g, '\\\"') + "\")'></span>";
 	  					}	
 					},				           
-					{ label: 'ID', name: 'uid', width: 150, key:true },
-					{ label: 'First name', name: 'firstName', width: 150 },
-					{ label: 'Last name', name: 'lastName', width: 150 },
-					{ label: 'Full name', name: 'fullName', width: 150 },
-					{ label: 'Display name', name: 'displayName', width: 150 },
-					{ label: 'Email', name: 'email', width: 250 },
-					{ label: 'Groups', name: 'groups', width: 250 }
+					{ label: 'Group name', name: 'name', width: 150, key:true },
+					{ label: 'Users', name: 'users', width: 250, 
+						formatter:function(cellValue, options, rowObject) {
+							var s = "";
+							$.each(rowObject.users, function(ind, val) {
+								s += groupUtils.formatUser(val, true);
+							});	
+							return s;
+						}
+					}					
 				],
 				viewrecords: true,
 				shrinkToFit: true,
@@ -71,7 +74,7 @@
 				rowNum: rowNum,
 				rowList: [10, 20, 50, 100, 500],
 				loadonce: true,
-				pager: "#users-grid-pager"
+				pager: "#groups-grid-pager"
 			});
 			
 			dialog.dialog({
@@ -79,44 +82,44 @@
 				height: 500,
 				width: 350,
 				modal: true,
-				close: function() { userUtils.reset(); },
+				close: function() { groupUtils.reset(); },
 				buttons: { 
-					"Save": function() { userUtils.submit(); },
-					"Cancel": function() { userUtils.closeDialog(); }
+					"Save": function() { groupUtils.submit(); },
+					"Cancel": function() { groupUtils.closeDialog(); }
 				}
 			});
 			 
 			dialog.find("form").on("submit", function( event ) {				
 				event.preventDefault();
-				var isNew = (selectedUser == null);
-				var user = userUtils.validate(isNew);
-				if (user != null) {
+				var isNew = (selectedGroup == null);
+				var group = groupUtils.validate(isNew);
+				if (group != null) {
 					var form = $(this);					
 					var url;
 					if (isNew) {
-						url = "ws/users/create";	
+						url = "ws/groups/create";	
 					} else {
-						url = "ws/users/update";
+						url = "ws/groups/update";
 					}
 					 
 					// Send the data using post
-					var posting = $.post( url, { "user": JSON.stringify(user) } );
+					var posting = $.post( url, { "group": JSON.stringify(group) } );
 				 
 					// Put the results in a div
 					posting.done(function( data ) {					
 						console.log(data);
-						$("#users-grid").jqGrid('setGridParam',{datatype:'json'}).trigger('reloadGrid');
+						$("#groups-grid").jqGrid('setGridParam',{datatype:'json'}).trigger('reloadGrid');
 					});
 				}
 			});
 			
-			$("#create-user").click( function() {
-				selectedUser = null;
-				userUtils.reset();
-				$("#user-dialog").dialog("open"); 
+			$("#create-group").click( function() {
+				selectedGroup = null;
+				groupUtils.reset();
+				$("#group-dialog").dialog("open"); 
 			} );
 			
-			$("#groups")
+			$("#users")
 				// don't navigate away from the field on tab when selecting an item
 				.bind( "keydown", function( event ) {
 					if (event.keyCode === $.ui.keyCode.TAB && $(this).autocomplete("instance").menu.active) {
@@ -125,8 +128,12 @@
 				})
 				.autocomplete({
 					source: function(request, response) {
-						$.getJSON("ws/groups/searchGroups", { search : extractLast(request.term) }, function(data) {
-							response(data.groups);
+						$.getJSON("ws/users/searchUsers", { search : extractLast(request.term) }, function(data) {
+							var j = [];
+							$.each(data.users, function(ind, val) {
+								j.push(groupUtils.formatUser(val, false));
+							});	
+							response(j);
 						});
 					},
 					search: function() {
@@ -157,34 +164,16 @@
 	</script>
 </head>
 <body>
-	<div id="user-dialog" title="Create new user" class="add-edit-dialog">
+	<div id="group-dialog" title="Create new user" class="add-edit-dialog">
 		<p class="validateTips">All form fields are required.</p>
 	
 		<form>
 			<fieldset>
-				<label for="uid">ID</label>
-				<input type="text" name="uid" id="uid" value="" class="text ui-widget-content ui-corner-all">
-			
-				<label for="name">First Name</label>
-				<input type="text" name="firstName" id="first-name" value="John" class="text ui-widget-content ui-corner-all">
+				<label for="name">Name</label>
+				<input type="text" name="name" id="name" value="" class="text ui-widget-content ui-corner-all">
 				
-				<label for="name">Last Name</label>
-				<input type="text" name="lastName" id="last-name" value="Doe" class="text ui-widget-content ui-corner-all">
-				
-				<label for="name">Full Name</label>
-				<input type="text" name="fullName" id="full-name" value="Doe" class="text ui-widget-content ui-corner-all">
-				
-				<label for="name">Display Name</label>
-				<input type="text" name="displayName" id="display-name" value="Doe" class="text ui-widget-content ui-corner-all">
-				
-				<label for="email">Email</label>
-				<input type="text" name="email" id="email" value="john@doe.com" class="text ui-widget-content ui-corner-all">
-				
-				<label for="password">Password</label>
-				<input type="password" name="password" id="password" value="xxxxxxx" class="text ui-widget-content ui-corner-all">
-				
-				<label for="groups">Groups</label>
-				<input type="text" name="groups" id="groups" class="text ui-widget-content ui-corner-all">
+				<label for="users">Users</label>
+				<input type="text" name="users" id="users" class="text ui-widget-content ui-corner-all">
 				
 				<!-- Allow form submission with keyboard without duplicating the dialog button -->
 				<input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
@@ -193,8 +182,8 @@
 	</div>
 
 
-	<table id="users-grid"></table>
-    <div id="users-grid-pager"></div>
-    <button id="create-user">Create new user</button>
+	<table id="groups-grid"></table>
+    <div id="groups-grid-pager"></div>
+    <button id="create-group">Create new group</button>
 </body>
 </html>

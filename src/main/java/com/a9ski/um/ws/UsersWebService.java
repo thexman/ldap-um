@@ -2,7 +2,7 @@ package com.a9ski.um.ws;
 
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Set;
+import java.util.List;
 
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -15,12 +15,7 @@ import javax.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.a9ski.um.config.ConfigurationProvider;
-import com.a9ski.um.config.ConfigurationProviderFactory;
-import com.a9ski.um.ldap.GroupMembershipValue;
 import com.a9ski.um.ldap.LdapClient;
 import com.a9ski.um.model.User;
 import com.a9ski.um.utils.PasswordUtils;
@@ -28,49 +23,18 @@ import com.unboundid.ldap.sdk.LDAPException;
 import com.unboundid.util.LDAPSDKException;
 
 @Path("/users")
-public class UsersWebService {
+public class UsersWebService extends AbstractWebService {
 
-	private final Logger logger = LoggerFactory.getLogger(UsersWebService.class); 
-	
-	private final ConfigurationProvider configProvider = ConfigurationProviderFactory.createConfigurationProvider();
-	private final String dnPattern;	
-	private final LdapClient ldapClient;
-	
+	private final String userDnPattern;	
 	public UsersWebService() {
 		super();
 		
-		final String host = configProvider.getLdapHost();
-		final int port = configProvider.getLdapPort();
-		final String bindDn = configProvider.getLdapBindDn();
-		final String password = configProvider.getLdapPassword();
+		
 		final String userBaseDn = configProvider.getUserBaseDn();
-		final String userSearchFilter = configProvider.getUserSearchFilter();
-		final String[] userObjectClasses = configProvider.getNewUserObjectClasses();
-		final String groupBaseDn = configProvider.getGroupBaseDn();
-		final String groupSearchFilter = configProvider.getGroupSearchFilter();
-		final String groupAttribute = configProvider.getGroupAttribute();
-		final GroupMembershipValue groupMembershipValue = configProvider.getGroupMembershipValue(); 
 		
-		
-		ldapClient = new LdapClient(host, port, bindDn, password, userBaseDn, userSearchFilter, userObjectClasses, groupBaseDn, groupSearchFilter, groupAttribute, groupMembershipValue);
-		dnPattern = StringUtils.replace(StringUtils.replace(configProvider.getUserDnPattern(), "<user-base-dn>", userBaseDn), "<user-id>", "%s");
+		userDnPattern = StringUtils.replace(StringUtils.replace(configProvider.getUserDnPattern(), "<user-base-dn>", userBaseDn), "<user-id>", "%s");
 	}
 	
-	
-	@Path("test")
-	@GET
-	@Produces(MediaType.TEXT_PLAIN)
-	public String test() {
-		return "It works!";
-	}
-	
-	@Path("json")
-	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	public JSONObject json() {
-		final JSONObject j = new JSONObject("{ 'status' : 'It works!' }");
-		return j;
-	}
 	
 	@Path("list")
 	@GET
@@ -94,7 +58,7 @@ public class UsersWebService {
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	public JSONObject create(@FormParam("user") JSONObject userJson) { 
-		final User user = User.fromJSON(userJson, dnPattern);
+		final User user = User.fromJSON(userJson, userDnPattern);
 		try { 
 			final User newUser = ldapClient.createUser(user);
 			final String password = userJson.optString("password");
@@ -107,24 +71,12 @@ public class UsersWebService {
 		}
 	}
 	
-	@Path("searchGroups")
-	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	public JSONObject searchGroups(@QueryParam("search")String search) {
-		try {
-			final Set<String> groups = ldapClient.searchGroupNames(search);
-			return createSuccessStatus().put("groups", new JSONArray(groups));
-		} catch (final LDAPException ex) {
-			return createFailureStatus(ex);
-		}
-	}
-	
 	
 	@Path("update")
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	public JSONObject update(@FormParam("user") JSONObject userJson)   { 
-		final User user = User.fromJSON(userJson, dnPattern);
+		final User user = User.fromJSON(userJson, userDnPattern);
 		try { 
 			final User updatedUser = ldapClient.updateUser(user);
 			final String password = userJson.optString("password");
@@ -135,7 +87,6 @@ public class UsersWebService {
 		} catch (LDAPSDKException ex) {
 			return createFailureStatus(ex);
 		}
-		
 	}
 	
 	@Path("password")
@@ -143,7 +94,7 @@ public class UsersWebService {
 	@Produces(MediaType.APPLICATION_JSON)
 	public JSONObject setPassword(@QueryParam("uid")String uid, @QueryParam("newPassword")String newPassword, @QueryParam("oldPassword")String oldPassword) {
 		try {
-			if (ldapClient.checkPassword(String.format(dnPattern, LdapClient.escapeDnLiteral(uid)), oldPassword)) {
+			if (ldapClient.checkPassword(String.format(userDnPattern, LdapClient.escapeDnLiteral(uid)), oldPassword)) {
 				ldapClient.changePassword(uid, PasswordUtils.encryptPassword(newPassword));
 				return createSuccessStatus();
 			} else {
@@ -152,28 +103,20 @@ public class UsersWebService {
 		} catch (UnsupportedEncodingException | NoSuchAlgorithmException | LDAPSDKException ex) {
 			return createFailureStatus(ex);
 		}
-		
-	}		
-	
-	private JSONObject createStatus(String status) {
-		return new JSONObject().put("status", status);
 	}
 	
-	private JSONObject createSuccessStatus() {
-		return createStatus("success");
-	}
-	
-	private JSONObject createFailureStatus() {
-		return createStatus("failure");
-	}
-	
-	private JSONObject createFailureStatus(Exception ex) {
-		logger.error("Failure status", ex);
-		return createFailureStatus(ex.getMessage()).put("exception", true);
-	}
-	
-	private JSONObject createFailureStatus(String message) {
-		return createFailureStatus().put("message", message);
+	@Path("searchUsers")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	public JSONObject searchUsers(@QueryParam("search")String search) {
+		try {
+			final List<User> users = ldapClient.searchUsers(search);
+			final JSONArray jarr = new JSONArray();
+			users.forEach(u -> jarr.put(u.toJSON()));			
+			return createSuccessStatus().put("users", jarr);
+		} catch (final LDAPSDKException ex) {
+			return createFailureStatus(ex);
+		}
 	}
 	
 }
