@@ -78,4 +78,10 @@ public class SystemPropertiesConfigurationProvider implements ConfigurationProvi
 		return GroupMembershipValue.valueOf(value);
 	}
 
+	@Override
+	public String[] getNewGroupObjectClasses() {
+		final String objectClasses = System.getProperty("ldap-group-object-classes", "groupOfUniqueNames,top");
+		return StringUtils.stripAll(objectClasses.split(","));
+	}
+
 }

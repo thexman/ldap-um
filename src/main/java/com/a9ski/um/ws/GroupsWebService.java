@@ -63,18 +63,13 @@ public class GroupsWebService extends AbstractWebService {
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	public JSONObject create(@FormParam("group") JSONObject groupJson) { 
-//		final Group user = Group.fromJSON(groupJson, dnPattern);
-//		try { 
-//			final User newUser = ldapClient.createUser(user);
-//			final String password = userJson.optString("password");
-//			if (StringUtils.isNotEmpty(password)) {
-//				ldapClient.changePassword(newUser.getUid(), password);
-//			}
-//			return createSuccessStatus().put("user", newUser.toJSON());
-//		} catch (final LDAPSDKException ex) {
-//			return createFailureStatus(ex);
-//		}
-		return null;
+		final Group group = Group.fromJSON(groupJson, groupDnPattern);
+		try { 
+			final Group newGroup = ldapClient.createGroup(group);
+			return createSuccessStatus().put("group", newGroup.toJSON());
+		} catch (final LDAPSDKException ex) {
+			return createFailureStatus(ex);
+		}
 	}
 	
 	@Path("searchGroups")
@@ -94,17 +89,12 @@ public class GroupsWebService extends AbstractWebService {
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	public JSONObject update(@FormParam("group") JSONObject groupJson)   { 
-//		final User user = User.fromJSON(userJson, dnPattern);
-//		try { 
-//			final User updatedUser = ldapClient.updateUser(user);
-//			final String password = userJson.optString("password");
-//			if (StringUtils.isNotEmpty(password)) {
-//				ldapClient.changePassword(updatedUser.getUid(), password);
-//			}
-//			return createSuccessStatus().put("user", updatedUser.toJSON());
-//		} catch (LDAPSDKException ex) {
-//			return createFailureStatus(ex);
-//		}
-		return null;
+		final Group group = Group.fromJSON(groupJson, groupDnPattern);
+		try { 
+			final Group updatedGroup = ldapClient.updateGroup(group);
+			return createSuccessStatus().put("group", updatedGroup.toJSON());
+		} catch (final LDAPSDKException ex) {
+			return createFailureStatus(ex);
+		}
 	}
 }

@@ -29,6 +29,17 @@ function GroupUtils(dialog) {
 			return true;
 		}
 	};
+	
+	this.checkNotEmpty = function(o, n) {
+		if (o.val().length < 1) {
+			o.addClass("ui-state-error");
+			this.updateTips("'" + n + "' is required.");
+			return false;
+		} else {
+			return true;
+		}
+	};
+	
 
 	this.checkRegexp = function(o, regexp, n) {
 		if (!(regexp.test(o.val()))) {
@@ -45,6 +56,7 @@ function GroupUtils(dialog) {
 	};
 				
 	this.reset = function() {
+		this.name.prop("readonly", false);
 		this.frm[0].reset();				
 		this.allFields().val("");
 		this.allFields().removeClass("ui-state-error");
@@ -55,6 +67,7 @@ function GroupUtils(dialog) {
 	};
 		
 	this.setGroup = function(group) {
+		this.name.prop("readonly", true);
 		this.name.val(group.name);
 		this.users.val(group.users); 
 	};
@@ -72,7 +85,8 @@ function GroupUtils(dialog) {
 		var valid = true;
 		this.allFields().removeClass("ui-state-error");
 	
-		valid = valid && this.checkLength(this.name, "Name", 2, 100);		
+		valid = valid && this.checkLength(this.name, "Name", 2, 100);
+		valid = valid && this.checkNotEmpty(this.users, "Users");
 		if (valid) {			
 			var group = {
 					"cn": this.name.val(),

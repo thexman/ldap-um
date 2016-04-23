@@ -4,6 +4,7 @@ import static com.a9ski.um.utils.DeltaUtils.calculateDeltaAdded;
 import static com.a9ski.um.utils.DeltaUtils.calculateDeltaDeleted;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -13,6 +14,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import com.a9ski.um.ldap.exceptions.LdapCustomException;
+import com.a9ski.um.ldap.exceptions.LdapGroupExistsException;
 import com.a9ski.um.ldap.exceptions.LdapUserExistsException;
 import com.a9ski.um.model.Group;
 import com.a9ski.um.model.User;
@@ -38,23 +40,23 @@ import com.unboundid.util.LDAPSDKException;
 public class LdapClient {
 	
 	
-	private static final String ATTRIBUTE_LAST_NAME = "sn";
+	private static final String USER_ATTRIBUTE_LAST_NAME = "sn";
 
-	private static final String ATTRIBUTE_FIRST_NAME = "givenname";
+	private static final String USER_ATTRIBUTE_FIRST_NAME = "givenname";
 
-	private static final String ATTRIBUTE_UID = "uid";
+	private static final String USER_ATTRIBUTE_UID = "uid";
 
-	private static final String ATTRIBUTE_EMAIL = "mail";
+	private static final String USER_ATTRIBUTE_EMAIL = "mail";
 
-	private static final String ATTRIBUTE_DISPLAY_NAME = "displayName";
+	private static final String USER_ATTRIBUTE_DISPLAY_NAME = "displayName";
 
-	private static final String ATTRIBUTE_FULL_NAME = "cn";
+	private static final String USER_ATTRIBUTE_FULL_NAME = "cn";
 	
-	private static final String ATTRIBUTE_PASSWORD = "userpassword";
+	private static final String USER_ATTRIBUTE_PASSWORD = "userpassword";
 	
 	private static final String ATTRIBUTE_OBJECT_CLASS = "objectclass";
 	
-	private static final String ATTRIBUTE_GROUP_NAME = "cn";
+	private static final String GROUP_ATTRIBUTE_GROUP_NAME = "cn";
 	
 	private final static String SPECIAL_CHARS = ",+\"\\<>;\r\n=/";
 	
@@ -65,10 +67,11 @@ public class LdapClient {
 	private final String password;
 	private final String userBaseDn;
 	private final String userSearchFilter;
-	private final String[] userObjectClasses;
+	private final String[] userObjectClasses;	
 	private final String groupBaseDn;
 	private final String groupSearchFilter;
 	private final String groupAttribute;
+	private final String[] groupObjectClasses;
 	private final GroupMembershipValue groupMembershipValue;
 	private final SingleServerSet serverSet;
 	
@@ -82,7 +85,7 @@ public class LdapClient {
 		return uid;
 	}
 	
-	public LdapClient(String host, int port, String bindDn, String password, String userBaseDn, String userSearchFilter, String[] newUserObjectClasses, String groupBaseDn, String groupSearchFilter, String groupAttribute, GroupMembershipValue groupMembershipValue) {
+	public LdapClient(String host, int port, String bindDn, String password, String userBaseDn, String userSearchFilter, String[] newUserObjectClasses, String groupBaseDn, String groupSearchFilter, String groupAttribute, String[] newGroupObjectClasses, GroupMembershipValue groupMembershipValue) {
 		super();
 		this.host = host;
 		this.port = port;
@@ -94,6 +97,7 @@ public class LdapClient {
 		this.groupBaseDn = groupBaseDn;
 		this.groupSearchFilter = groupSearchFilter;
 		this.groupAttribute = groupAttribute;
+		this.groupObjectClasses = newGroupObjectClasses;
 		this.groupMembershipValue = groupMembershipValue;
 		this.serverSet = new SingleServerSet(host, port);
 	}
@@ -115,7 +119,7 @@ public class LdapClient {
 	}
 	
 	public void changePassword(String uid, String newPassword) throws LDAPSDKException {
-		changeUserAttribute(uid, ATTRIBUTE_PASSWORD, newPassword);
+		changeUserAttribute(uid, USER_ATTRIBUTE_PASSWORD, newPassword);
 	}
 	
 	public User findUserByUid(String uid) throws LDAPSDKException {
@@ -128,9 +132,9 @@ public class LdapClient {
 	}
 	
 	public List<User> searchUsers(String search) throws LDAPSDKException {
-		final String uid = "(" + ATTRIBUTE_UID + "=*" + Filter.encodeValue(search) + "*)";
-		final String displayName = "(" + ATTRIBUTE_DISPLAY_NAME + "=*" + Filter.encodeValue(search) + "*)";
-		final String fullName = "(" + ATTRIBUTE_FULL_NAME + "=*" + Filter.encodeValue(search) + "*)";
+		final String uid = "(" + USER_ATTRIBUTE_UID + "=*" + Filter.encodeValue(search) + "*)";
+		final String displayName = "(" + USER_ATTRIBUTE_DISPLAY_NAME + "=*" + Filter.encodeValue(search) + "*)";
+		final String fullName = "(" + USER_ATTRIBUTE_FULL_NAME + "=*" + Filter.encodeValue(search) + "*)";
 		final String or = "(|" + uid + displayName + fullName + ")";
 		final String query = "(&" + or + userSearchFilter + ")";
 		return findUsers(Filter.create(query));
@@ -170,11 +174,11 @@ public class LdapClient {
 				throw new LdapCustomException("User doesn't exists");
 			}
 			final String dn = existingUser.getDn(); 
-			changeAttribute(ldapConnection, dn, ATTRIBUTE_FULL_NAME, u.getFullName());
-			changeAttribute(ldapConnection, dn, ATTRIBUTE_DISPLAY_NAME, u.getDisplayName());
-			changeAttribute(ldapConnection, dn, ATTRIBUTE_EMAIL, u.getEmail());
-			changeAttribute(ldapConnection, dn, ATTRIBUTE_FIRST_NAME, u.getFirstName());
-			changeAttribute(ldapConnection, dn, ATTRIBUTE_LAST_NAME, u.getLastName());
+			changeAttribute(ldapConnection, dn, USER_ATTRIBUTE_FULL_NAME, u.getFullName());
+			changeAttribute(ldapConnection, dn, USER_ATTRIBUTE_DISPLAY_NAME, u.getDisplayName());
+			changeAttribute(ldapConnection, dn, USER_ATTRIBUTE_EMAIL, u.getEmail());
+			changeAttribute(ldapConnection, dn, USER_ATTRIBUTE_FIRST_NAME, u.getFirstName());
+			changeAttribute(ldapConnection, dn, USER_ATTRIBUTE_LAST_NAME, u.getLastName());
 			
 			final Set<String> groupsAdded = calculateDeltaAdded(existingUser.getGroups(), u.getGroups());
 			addUserToGroups(ldapConnection, u, groupsAdded);
@@ -189,12 +193,12 @@ public class LdapClient {
 	}
 
 	
-	public User createUser(User u) throws LDAPSDKException {
+	public User createUser(final User u) throws LDAPSDKException {
 		final LDAPConnection ldapConnection = getBindedConnection();				
 		try {
 			final User existingUser = findUserByUid(ldapConnection, u.getUid(), true);
 			if (existingUser != null) {				
-				throw new LdapUserExistsException(String.format("User with '%s' already exists", u.getUid()));
+				throw new LdapUserExistsException(String.format("User with uuid '%s' already exists", u.getUid()));
 			}
 			createUser(ldapConnection, u);
 			return findUserByUid(ldapConnection, u.getUid(), true);
@@ -203,6 +207,85 @@ public class LdapClient {
 		}
 	}
 	
+	public Group createGroup(final Group g) throws LDAPSDKException {
+		final LDAPConnection ldapConnection = getBindedConnection();				
+		try {
+			final Group existingGroup = findGroup(ldapConnection, g.getGroupName());
+			if (existingGroup != null) {				
+				throw new LdapGroupExistsException(String.format("Group with name '%s' already exists", g.getGroupName()));
+			}
+			createGroup(ldapConnection, g);
+			return findGroup(ldapConnection, g.getGroupName());
+		} finally {
+			ldapConnection.close();
+		}
+	}
+	
+	public Group updateGroup(Group g) throws LDAPSDKException {
+		final LDAPConnection ldapConnection = getBindedConnection();				
+		try {
+			final Group existingGroup = findGroup(ldapConnection, g.getGroupName());
+			if (existingGroup == null) {				
+				throw new LdapCustomException("Group doesn't exists");
+			}
+			updateGroup(ldapConnection, g);
+			return findGroup(ldapConnection, g.getGroupName());
+		} finally {
+			ldapConnection.close();
+		}
+
+	}
+	
+	
+	private void createGroup(final LDAPConnection ldapConnection, final Group g) throws LDAPSDKException {		
+		if (CollectionUtils.isNotEmpty(g.getUsers())) {
+			final Set<User> users = new HashSet<User>();
+			for(final User u : g.getUsers()) {
+				if (StringUtils.isNotBlank(u.getUid())) {
+					final User existingUser = findUserByUid(u.getUid());
+					if (existingUser != null) {
+						users.add(existingUser);
+					}
+				}
+			}
+			final String dn = String.format("cn=%s,%s", g.getGroupName(), groupBaseDn);
+			final List<Attribute> attributes = new ArrayList<>();
+			attributes.add(new Attribute(GROUP_ATTRIBUTE_GROUP_NAME, g.getGroupName()));
+			attributes.add(new Attribute(ATTRIBUTE_OBJECT_CLASS, groupObjectClasses));
+			for(final User u : users) {
+				attributes.add(new Attribute(groupAttribute, getGroupMembershipValue(u)));
+			}
+			final AddRequest addRequest = new AddRequest(dn, attributes);  
+			ldapConnection.add(addRequest);
+		} else {
+			throw new LdapCustomException("Empty users");
+		}
+	}
+	
+	private void updateGroup(final LDAPConnection ldapConnection, final Group g) throws LDAPSDKException {		
+		if (CollectionUtils.isNotEmpty(g.getUsers())) {
+			final Set<User> users = new HashSet<User>();
+			for(final User u : g.getUsers()) {
+				if (StringUtils.isNotBlank(u.getUid())) {
+					final User existingUser = findUserByUid(u.getUid());
+					if (existingUser != null) {
+						users.add(existingUser);
+					}
+				}
+			}
+			final String dn = String.format("cn=%s,%s", g.getGroupName(), groupBaseDn);
+			final List<Modification> modifications = new ArrayList<>();
+			modifications.add(new Modification(ModificationType.DELETE, groupAttribute));
+			for(final User u : users) {
+				modifications.add(new Modification(ModificationType.ADD, groupAttribute, getGroupMembershipValue(u)));
+			}
+			final ModifyRequest request = new ModifyRequest(dn, modifications);  
+			ldapConnection.modify(request);
+		} else {
+			throw new LdapCustomException("Empty users");
+		}
+	}
+
 	public Set<String> searchGroupNames(String search) throws LDAPException {
 		return getGroupNames(searchGroups(search));
 	}
@@ -241,15 +324,20 @@ public class LdapClient {
 	public Group findGroup(String groupName) throws LDAPException {
 		final LDAPConnection ldapConnection = getBindedConnection();
 		try {
-			final Filter f = Filter.create(createGroupExactMatchQuery(groupName));
-			final List<Group> groups = findGroups(ldapConnection, f);
-			if (CollectionUtils.isNotEmpty(groups)) {
-				return groups.get(0);
-			} else {
-				return null;
-			}
+			return findGroup(ldapConnection, groupName);
 		} finally {
 			ldapConnection.close();
+		}
+	}
+
+	private Group findGroup(final LDAPConnection ldapConnection, String groupName)
+			throws LDAPException, LDAPSearchException {
+		final Filter f = Filter.create(createGroupExactMatchQuery(groupName));
+		final List<Group> groups = findGroups(ldapConnection, f);
+		if (CollectionUtils.isNotEmpty(groups)) {
+			return groups.get(0);
+		} else {
+			return null;
 		}
 	}
 
@@ -275,13 +363,13 @@ public class LdapClient {
 	private void createUser(final LDAPConnection ldapConnection, User u) throws LDAPException {
 		final String dn = String.format("uid=%s,%s", u.getUid(), userBaseDn);
 		final List<Attribute> attributes = new ArrayList<>();
-		attributes.add(new Attribute(ATTRIBUTE_FULL_NAME, u.getFullName()));
-		attributes.add(new Attribute(ATTRIBUTE_DISPLAY_NAME, u.getDisplayName()));
-		attributes.add(new Attribute(ATTRIBUTE_EMAIL, u.getEmail()));
-		attributes.add(new Attribute(ATTRIBUTE_FIRST_NAME, u.getFirstName()));
-		attributes.add(new Attribute(ATTRIBUTE_LAST_NAME, u.getLastName()));
-		attributes.add(new Attribute(ATTRIBUTE_LAST_NAME, u.getLastName()));
-		attributes.add(new Attribute(ATTRIBUTE_PASSWORD, UUID.randomUUID().toString()));
+		attributes.add(new Attribute(USER_ATTRIBUTE_FULL_NAME, u.getFullName()));
+		attributes.add(new Attribute(USER_ATTRIBUTE_DISPLAY_NAME, u.getDisplayName()));
+		attributes.add(new Attribute(USER_ATTRIBUTE_EMAIL, u.getEmail()));
+		attributes.add(new Attribute(USER_ATTRIBUTE_FIRST_NAME, u.getFirstName()));
+		attributes.add(new Attribute(USER_ATTRIBUTE_LAST_NAME, u.getLastName()));
+		attributes.add(new Attribute(USER_ATTRIBUTE_LAST_NAME, u.getLastName()));
+		attributes.add(new Attribute(USER_ATTRIBUTE_PASSWORD, UUID.randomUUID().toString()));
 		attributes.add(new Attribute(ATTRIBUTE_OBJECT_CLASS, userObjectClasses));
 		final AddRequest addRequest = new AddRequest(dn, attributes);  
 		ldapConnection.add(addRequest);
@@ -346,12 +434,12 @@ public class LdapClient {
 	}
 
 	private User toUser(LDAPConnection ldapConnection, final ReadOnlyEntry e, boolean loadUserGroups) throws LDAPException {
-		final String fullName = e.getAttributeValue(ATTRIBUTE_FULL_NAME);
-		final String displayName = e.getAttributeValue(ATTRIBUTE_DISPLAY_NAME);
-		final String email = e.getAttributeValue(ATTRIBUTE_EMAIL);
-		final String uid = e.getAttributeValue(ATTRIBUTE_UID);
-		final String firstName = e.getAttributeValue(ATTRIBUTE_FIRST_NAME);
-		final String lastName = e.getAttributeValue(ATTRIBUTE_LAST_NAME);
+		final String fullName = e.getAttributeValue(USER_ATTRIBUTE_FULL_NAME);
+		final String displayName = e.getAttributeValue(USER_ATTRIBUTE_DISPLAY_NAME);
+		final String email = e.getAttributeValue(USER_ATTRIBUTE_EMAIL);
+		final String uid = e.getAttributeValue(USER_ATTRIBUTE_UID);
+		final String firstName = e.getAttributeValue(USER_ATTRIBUTE_FIRST_NAME);
+		final String lastName = e.getAttributeValue(USER_ATTRIBUTE_LAST_NAME);
 		
 		final User user = new User(e.getDN(), uid, firstName, lastName, fullName, displayName, email, new TreeSet<String>());
 		if (loadUserGroups) {
@@ -370,14 +458,14 @@ public class LdapClient {
 			}
 		}
 		
-		final String name = e.getAttributeValue(ATTRIBUTE_GROUP_NAME);
+		final String name = e.getAttributeValue(GROUP_ATTRIBUTE_GROUP_NAME);
 		final Group group = new Group(e.getDN(), StringUtils.defaultString(name, ""), users);
 
 		return group;
 	}
 	
 	private Group toGroup(ReadOnlyEntry e) {
-		final String name = e.getAttributeValue(ATTRIBUTE_GROUP_NAME);
+		final String name = e.getAttributeValue(GROUP_ATTRIBUTE_GROUP_NAME);
 		final Group g = new Group(e.getDN(), StringUtils.defaultString(name, ""));
 		return g;
 	}
@@ -467,6 +555,4 @@ public class LdapClient {
 		}
 		return u.getDn();
 	}
-	
-	
 }

@@ -31,9 +31,10 @@ public class LdapClientFactory implements Serializable {
 		final String groupBaseDn = configProvider.getGroupBaseDn();
 		final String groupSearchFilter = configProvider.getGroupSearchFilter();
 		final String groupAttribute = configProvider.getGroupAttribute();
+		final String[] groupObjectClasses = configProvider.getNewGroupObjectClasses();
 		final GroupMembershipValue groupMembershipValue = configProvider.getGroupMembershipValue(); 
 		
-		return new LdapClient(host, port, bindDn, password, userBaseDn, userSearchFilter, userObjectClasses, groupBaseDn, groupSearchFilter, groupAttribute, groupMembershipValue);
+		return new LdapClient(host, port, bindDn, password, userBaseDn, userSearchFilter, userObjectClasses, groupBaseDn, groupSearchFilter, groupAttribute, groupObjectClasses, groupMembershipValue);
 	}
 	
 
