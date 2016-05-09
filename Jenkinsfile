@@ -1,7 +1,7 @@
  node('maven') {
-  #env.PATH = "${tool 'Maven 3'}/bin:${env.PATH}"
+  //env.PATH = "${tool 'Maven 3'}/bin:${env.PATH}"
   stage 'Checkout'
-  #checkout scm
+  //checkout scm
   git url: "https://github.com/thexman/ldap-um.git"
 
   stage 'Build'
