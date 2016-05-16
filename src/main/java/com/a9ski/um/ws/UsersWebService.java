@@ -3,6 +3,7 @@ package com.a9ski.um.ws;
 import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.Set;
 
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -90,9 +91,9 @@ public class UsersWebService extends AbstractWebService {
 	}
 	
 	@Path("password")
-	@GET
+	@POST
 	@Produces(MediaType.APPLICATION_JSON)
-	public JSONObject setPassword(@QueryParam("uid")String uid, @QueryParam("newPassword")String newPassword, @QueryParam("oldPassword")String oldPassword) {
+	public JSONObject setPassword(@FormParam("uid")String uid, @FormParam("newPassword")String newPassword, @FormParam("oldPassword")String oldPassword) {
 		try {
 			if (ldapClient.checkPassword(String.format(userDnPattern, LdapClient.escapeDnLiteral(uid)), oldPassword)) {
 				ldapClient.changePassword(uid, PasswordUtils.encryptPassword(newPassword));
@@ -117,6 +118,14 @@ public class UsersWebService extends AbstractWebService {
 		} catch (final LDAPSDKException ex) {
 			return createFailureStatus(ex);
 		}
+	}
+	
+	@Path("currentUser")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	public JSONObject currentUsers() {
+		final User currentUser = new User("dn", "uid", "firstName", "lastName", "fullName", "displayName", "email", null);		
+		return createSuccessStatus().put("currentUser", currentUser.toJSON());
 	}
 	
 }

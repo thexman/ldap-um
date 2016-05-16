@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8">
+	<title>User management Self services</title>
+	<script type="application/javascript" src="jquery/jquery-1.11.3.js"></script>
+	<script type="application/javascript" src="jquery-ui/jquery-ui.js"></script>
+	<script type="application/javascript" src="jqgrid/js/jquery.jqGrid.js"></script>
+	<script type="application/javascript" src="jqgrid/js/i18n/grid.locale-en.js"></script>
+	<script type="application/javascript" src="js/user-utils.js"></script>
+	
+	
+	<link rel="stylesheet" type="text/css" media="screen" href="jquery-ui/jquery-ui.css" />
+	<link rel="stylesheet" type="text/css" media="screen" href="jqgrid/css/ui.jqgrid.css" />
+	<link rel="stylesheet" type="text/css" media="screen" href="css/main.css" />
+	<script type="application/javascript">
+		$(function() {
+			var loading = $('#loading-div').hide();
+			$(document).ajaxStart(function () {
+				loading.show();
+			}).ajaxStop(function () {
+				loading.hide();
+			});
+			
+			function showDialog(title, text) {
+				$("<div title='" + title + "'>" + text + "</div>").dialog({
+					modal: true,
+					resizable: false,
+					buttons: {
+						"OK": function () {
+							$(this).dialog("close");
+						}
+					}
+				});
+			}
+			
+			
+			var div = $("#user-self-services");
+			var userUtils = new UserUtils(div);
+			$.get("ws/users/currentUser", function(data) {
+				//console.log(data);
+				if (data.status === "success") {
+					userUtils.setUser(data.currentUser);
+				}
+			});
+			
+			$("#save-user").click(function(e) {
+				e.preventDefault();
+				var uid = div.find("uid").val();
+				var oldPassword = div.find("#old-password").val();
+				var newPassword1 = div.find("#new-password-1").val();
+				var newPassword2 = div.find("#new-password-2").val();
+				if (newPassword1 === newPassword2) {
+					var frm = $("#hidden-form");
+					frm.find("#hidden-old-password").val(oldPassword);
+					frm.find("#hidden-new-password").val(newPassword1);
+					frm.find("#hidden-uid").val(uid);
+					$.post("ws/users/password", frm.serialize(), function(data) {
+						if (data.status == "success" ) {
+							showDialog("Info", "Password changed successfully");
+						} else {
+							showDialog("Error", data.message);
+						}
+					}, "json");				
+				} else {
+					showDialog("Warning", "New password doesn't match");					
+				}
+			});			
+		});
+	</script>
+</head>
+<body>
+	<div id="loading-div" class="ajax-loader">
+		<img src="images/loading-gears-animation-3.gif" width="100px" height="70px" style="margin: 5px 0px 0px 5px"/>
+	</div>
+
+	<form id="hidden-form" style="display:none">
+		<input type="hidden" name="oldPassword" id="hidden-old-password">
+		<input type="hidden" name="newPassword" id="hidden-new-password">
+		<input type="hidden" name="uid" id="hidden-uid">
+	</form>
+
+	<div id="user-self-services" class="user-self-services">		
+		<form>
+			<fieldset>
+				<label for="uid">ID</label>
+				<input type="text" name="uid" id="uid" value="" class="text ui-widget-content ui-corner-all" readonly>
+			
+				<label for="name">First Name</label>
+				<input type="text" name="firstName" id="first-name" value="" class="text ui-widget-content ui-corner-all" readonly>
+				
+				<label for="name">Last Name</label>
+				<input type="text" name="lastName" id="last-name" value="" class="text ui-widget-content ui-corner-all" readonly>
+				
+				<label for="name">Full Name</label>
+				<input type="text" name="fullName" id="full-name" value="" class="text ui-widget-content ui-corner-all" readonly>
+				
+				<label for="name">Display Name</label>
+				<input type="text" name="displayName" id="display-name" value="" class="text ui-widget-content ui-corner-all" readonly>
+				
+				<label for="email">Email</label>
+				<input type="text" name="email" id="email" value="" class="text ui-widget-content ui-corner-all" readonly>
+				
+				<label for="oldPassword">Old Password</label>
+				<input type="password" name="oldPassword" id="old-password" value="" class="text ui-widget-content ui-corner-all">
+				
+				<label for="newPassword1">New Password</label>
+				<input type="password" name="newPassword1" id="new-password-1" value="" class="text ui-widget-content ui-corner-all">
+				
+				<label for="newPassword2">Confirm New Password</label>
+				<input type="password" name="newPassword2" id="new-password-2" value="" class="text ui-widget-content ui-corner-all">
+				
+				<label for="groups">Groups</label>
+				<input type="text" name="groups" id="groups" class="text ui-widget-content ui-corner-all" readonly>
+				
+				<!-- Allow form submission with keyboard without duplicating the dialog button -->				
+				<button id="save-user">Change password</button>
+			</fieldset>
+		</form>
+	</div>
+	
+	
+    
+</body>
+</html>
