@@ -28,51 +28,62 @@
 	
 	
 	<!-- login configuration -->
-	<!-- login-config>
+	<login-config>
 	    <auth-method>FORM</auth-method>	    
 	    <realm-name>umRealm</realm-name>
 	    <form-login-config>
-	        <form-login-page>/login.xhtml</form-login-page>
-	        <form-error-page>/errorLogin.xhtml</form-error-page>
+	        <form-login-page>/login.html</form-login-page>
+	        <form-error-page>/login-error.html</form-error-page>
 	    </form-login-config>
-	</login-config-->
+	</login-config>
 	
 	<!-- define a constraint for any url of the application, for the user to be any of the access role(s) -->
-	<!-- security-constraint>
-        <display-name>authenticated-user-constraint</display-name>
+	<security-constraint>
+        <display-name>admin-user-constraint</display-name>
         <web-resource-collection>
-            <web-resource-name>dynamic-resources</web-resource-name>
+            <web-resource-name>admin-user-resources</web-resource-name>
             <description/>
             <url-pattern>/*</url-pattern>
         </web-resource-collection>
         <auth-constraint>
-            <description>Only authenticated users are authorized</description>
-            <role-name>UmAdmin</role-name>
-			<role-name>UmUser</role-name>
+            <description>Only admins are authorized</description>
+            <role-name>UmAdmin</role-name>			
+        </auth-constraint>
+    </security-constraint>
+    
+    <security-constraint>
+        <display-name>normal-user-constraint</display-name>
+        <web-resource-collection>
+            <web-resource-name>normal-user-resources</web-resource-name>
+            <description/>
+            <url-pattern>/index.html</url-pattern>
+            <url-pattern>/self.html</url-pattern>            
+            <url-pattern>/ws/users/currentUser</url-pattern>
+            <url-pattern>/ws/users/password</url-pattern>
+            <url-pattern>/ws/users/logout</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <description>Only normal users are authorized</description>
+            <role-name>UmUser</role-name>			
         </auth-constraint>
     </security-constraint>
     	    
 	<security-constraint>
         <display-name>anonymous-user-constraint</display-name>
         <web-resource-collection>
-            <web-resource-name>javascript-resources</web-resource-name>
+            <web-resource-name>static-resources</web-resource-name>
             <description/>
-            <url-pattern>/js/*</url-pattern>
-        </web-resource-collection>
-        <web-resource-collection>
-            <web-resource-name>image-resources</web-resource-name>
-            <description/>
+            <url-pattern>/css/*</url-pattern>
             <url-pattern>/images/*</url-pattern>
-        </web-resource-collection>        
-        <web-resource-collection>
-            <web-resource-name>javascript-resources</web-resource-name>
-            <description/>
-            <url-pattern>/ws/*</url-pattern>
-        </web-resource-collection>
-    </security-constraint-->
+            <url-pattern>/jqgrid/*</url-pattern>
+            <url-pattern>/jquery/*</url-pattern>
+            <url-pattern>/jquery-ui/*</url-pattern>
+            <url-pattern>/js/*</url-pattern>            
+        </web-resource-collection>              
+    </security-constraint>
     
 	<!-- security roles for the app -->
-	<!-- security-role>
+	<security-role>
 		<description>Users with administration privileges</description>
 		<role-name>UmAdmin</role-name>		
 	</security-role>   		
@@ -80,6 +91,6 @@
 	<security-role>
 		<description>Users with standard privileges</description>		
 		<role-name>UmUser</role-name>
-	</security-role-->
+	</security-role>
 	
 </web-app>

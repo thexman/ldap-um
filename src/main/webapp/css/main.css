@@ -46,6 +46,10 @@
 	width: 330px;
 }
 
+.user-self-services input:disabled {
+	background:#D6D3D3;
+}
+
 .ajax-loader {
 	width: 110px
 	height: 90px;	

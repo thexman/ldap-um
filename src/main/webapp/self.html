@@ -46,7 +46,7 @@
 			
 			$("#save-user").click(function(e) {
 				e.preventDefault();
-				var uid = div.find("uid").val();
+				var uid = div.find("#uid").val();
 				var oldPassword = div.find("#old-password").val();
 				var newPassword1 = div.find("#new-password-1").val();
 				var newPassword2 = div.find("#new-password-2").val();
@@ -84,22 +84,25 @@
 		<form>
 			<fieldset>
 				<label for="uid">ID</label>
-				<input type="text" name="uid" id="uid" value="" class="text ui-widget-content ui-corner-all" readonly>
+				<input type="text" name="uid" id="uid" value="" class="text ui-widget-content ui-corner-all" readonly disabled>
 			
 				<label for="name">First Name</label>
-				<input type="text" name="firstName" id="first-name" value="" class="text ui-widget-content ui-corner-all" readonly>
+				<input type="text" name="firstName" id="first-name" value="" class="text ui-widget-content ui-corner-all" readonly disabled>
 				
 				<label for="name">Last Name</label>
-				<input type="text" name="lastName" id="last-name" value="" class="text ui-widget-content ui-corner-all" readonly>
+				<input type="text" name="lastName" id="last-name" value="" class="text ui-widget-content ui-corner-all" readonly disabled>
 				
 				<label for="name">Full Name</label>
-				<input type="text" name="fullName" id="full-name" value="" class="text ui-widget-content ui-corner-all" readonly>
+				<input type="text" name="fullName" id="full-name" value="" class="text ui-widget-content ui-corner-all" readonly disabled>
 				
 				<label for="name">Display Name</label>
-				<input type="text" name="displayName" id="display-name" value="" class="text ui-widget-content ui-corner-all" readonly>
+				<input type="text" name="displayName" id="display-name" value="" class="text ui-widget-content ui-corner-all" readonly disabled>
 				
 				<label for="email">Email</label>
-				<input type="text" name="email" id="email" value="" class="text ui-widget-content ui-corner-all" readonly>
+				<input type="text" name="email" id="email" value="" class="text ui-widget-content ui-corner-all" readonly disabled>
+		
+				<label for="groups">Groups</label>
+				<input type="text" name="groups" id="groups" class="text ui-widget-content ui-corner-all" readonly disabled>
 				
 				<label for="oldPassword">Old Password</label>
 				<input type="password" name="oldPassword" id="old-password" value="" class="text ui-widget-content ui-corner-all">
@@ -109,9 +112,6 @@
 				
 				<label for="newPassword2">Confirm New Password</label>
 				<input type="password" name="newPassword2" id="new-password-2" value="" class="text ui-widget-content ui-corner-all">
-				
-				<label for="groups">Groups</label>
-				<input type="text" name="groups" id="groups" class="text ui-widget-content ui-corner-all" readonly>
 				
 				<!-- Allow form submission with keyboard without duplicating the dialog button -->				
 				<button id="save-user">Change password</button>
