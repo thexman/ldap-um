@@ -1,10 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="ISO-8859-1">
-<title>Insert title here</title>
+	<link rel="stylesheet" href="font-awesome/css/font-awesome.min.css">
 </head>
+<style>
+.menu {
+	
+}
+.menu ul {
+	list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    /*(background-color: #dddddd;*/
+}
+.menu ul li{			
+	float: left;
+	
+	background: linear-gradient(#1fa0e4, #1992d1);
+	padding: 15px 20px;
+    
+    border-bottom: 1px solid #1682ba;
+    border-top: 1px solid #1682ba;	
+}
+
+.menu ul li a {	
+	font-family: 'Times New Roman';
+	font-size: 14px;
+	color: #ffffff;
+    font-weight: bold;
+	text-decoration: none;
+	display: block;
+}
+
+.menu ul li:hover {	
+	background: linear-gradient(#1890d0, #1992d1);	
+}
+
+.menu ul li:hover a {
+	background: linear-gradient(#1890d0, #1992d1);	
+	color: yellow;
+}
+
+</style>
+
 <body>
-	Hello world!
-</body>
-</html>
+
+<div class="menu">
+	<ul>
+		<li><a href="http://link1"><i class="fa fa-fw fa-user"></i> Users</a></li>
+		<li><a href="http://groups"><i class="fa fa-fw fa-group"></i> Groups</a></li>
+		<li><a href="#"><i class="fa fa-fw fa-cog"></i> Profile</a></li>
+		<li><a href="#"><i class="fa fa-fw fa-sign-out"></i> Logout</a></li>
+	</ul>
+</div>
+
+<body>	  
+</html>	
