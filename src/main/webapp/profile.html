@@ -2,12 +2,14 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=utf-8">
-	<title>User management Self services</title>
+	<title>Profile</title>
 	<script type="application/javascript" src="jquery/jquery-1.11.3.js"></script>
 	<script type="application/javascript" src="jquery-ui/jquery-ui.js"></script>
 	<script type="application/javascript" src="jqgrid/js/jquery.jqGrid.js"></script>
 	<script type="application/javascript" src="jqgrid/js/i18n/grid.locale-en.js"></script>
 	<script type="application/javascript" src="js/user-utils.js"></script>
+	<script type="application/javascript" src="js/ajax-utils.js"></script>
+	<script type="application/javascript" src="js/menu-utils.js"></script>
 	
 	
 	<link rel="stylesheet" type="text/css" media="screen" href="jquery-ui/jquery-ui.css" />
@@ -15,12 +17,8 @@
 	<link rel="stylesheet" type="text/css" media="screen" href="css/main.css" />
 	<script type="application/javascript">
 		$(function() {
-			var loading = $('#loading-div').hide();
-			$(document).ajaxStart(function () {
-				loading.show();
-			}).ajaxStop(function () {
-				loading.hide();
-			});
+			var ajaxUtils = new AjaxUtils($('#loading-div'));
+			var menuUtils = new MenuUtils();
 			
 			function showDialog(title, text) {
 				$("<div title='" + title + "'>" + text + "</div>").dialog({
@@ -35,7 +33,7 @@
 			}
 			
 			
-			var div = $("#user-self-services");
+			var div = $("#user-profile");
 			var userUtils = new UserUtils(div);
 			$.get("ws/users/currentUser", function(data) {
 				//console.log(data);
@@ -45,16 +43,14 @@
 			});
 			
 			$("#save-user").click(function(e) {
-				e.preventDefault();
-				var uid = div.find("#uid").val();
+				e.preventDefault();				
 				var oldPassword = div.find("#old-password").val();
 				var newPassword1 = div.find("#new-password-1").val();
 				var newPassword2 = div.find("#new-password-2").val();
 				if (newPassword1 === newPassword2) {
 					var frm = $("#hidden-form");
 					frm.find("#hidden-old-password").val(oldPassword);
-					frm.find("#hidden-new-password").val(newPassword1);
-					frm.find("#hidden-uid").val(uid);
+					frm.find("#hidden-new-password").val(newPassword1);					
 					$.post("ws/users/password", frm.serialize(), function(data) {
 						if (data.status == "success" ) {
 							showDialog("Info", "Password changed successfully");
@@ -70,17 +66,25 @@
 	</script>
 </head>
 <body>
-	<div id="loading-div" class="ajax-loader">
+	<div id="loading-div" class="ajax-loader" style="display:none">
 		<img src="images/loading-gears-animation-3.gif" width="100px" height="70px" style="margin: 5px 0px 0px 5px"/>
 	</div>
 
 	<form id="hidden-form" style="display:none">
 		<input type="hidden" name="oldPassword" id="hidden-old-password">
-		<input type="hidden" name="newPassword" id="hidden-new-password">
-		<input type="hidden" name="uid" id="hidden-uid">
+		<input type="hidden" name="newPassword" id="hidden-new-password">		
 	</form>
 
-	<div id="user-self-services" class="user-self-services">		
+	<div class="menu">
+		<ul>
+			<li class="admin-role-required"><a href="users.html"><i class="fa fa-fw fa-user"></i> Users</a></li>
+			<li class="admin-role-required"><a href="groups.html"><i class="fa fa-fw fa-group"></i> Groups</a></li>
+			<li><a href="profile.html"><i class="fa fa-fw fa-cog"></i> Profile</a></li>
+			<li><a href="ws/users/logout"><i class="fa fa-fw fa-sign-out"></i> Logout</a></li>
+		</ul>
+	</div>
+
+	<div id="user-profile" class="user-profile">		
 		<form>
 			<fieldset>
 				<label for="uid">ID</label>

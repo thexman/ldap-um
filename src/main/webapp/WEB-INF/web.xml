@@ -57,14 +57,16 @@
             <web-resource-name>normal-user-resources</web-resource-name>
             <description/>
             <url-pattern>/index.html</url-pattern>
-            <url-pattern>/self.html</url-pattern>            
+            <url-pattern>/profile.html</url-pattern>            
             <url-pattern>/ws/users/currentUser</url-pattern>
             <url-pattern>/ws/users/password</url-pattern>
             <url-pattern>/ws/users/logout</url-pattern>
+            <url-pattern>/ws/users/isAdmin</url-pattern>
         </web-resource-collection>
         <auth-constraint>
-            <description>Only normal users are authorized</description>
-            <role-name>UmUser</role-name>			
+            <description>Normal users are authorized</description>
+            <role-name>UmUser</role-name>
+            <role-name>UmAdmin</role-name>			
         </auth-constraint>
     </security-constraint>
     	    
@@ -74,6 +76,7 @@
             <web-resource-name>static-resources</web-resource-name>
             <description/>
             <url-pattern>/css/*</url-pattern>
+            <url-pattern>/font-awesome/*</url-pattern>
             <url-pattern>/images/*</url-pattern>
             <url-pattern>/jqgrid/*</url-pattern>
             <url-pattern>/jquery/*</url-pattern>

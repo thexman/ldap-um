@@ -8,6 +8,8 @@
 	<script type="application/javascript" src="jqgrid/js/jquery.jqGrid.js"></script>
 	<script type="application/javascript" src="jqgrid/js/i18n/grid.locale-en.js"></script>
 	<script type="application/javascript" src="js/group-utils.js"></script>
+	<script type="application/javascript" src="js/ajax-utils.js"></script>
+	<script type="application/javascript" src="js/menu-utils.js"></script>
 	
 	
 	<link rel="stylesheet" type="text/css" media="screen" href="jquery-ui/jquery-ui.css" />
@@ -33,7 +35,9 @@
 		}
 	
 		$(document).ready(function () {
-						
+			var ajaxUtils = new AjaxUtils($('#loading-div'));
+			var menuUtils = new MenuUtils();
+			
 			var dialog = $("#group-dialog");
 			groupUtils = new GroupUtils(dialog);
 			
@@ -164,6 +168,10 @@
 	</script>
 </head>
 <body>
+	<div id="loading-div" class="ajax-loader" style="display:none">
+		<img src="images/loading-gears-animation-3.gif" width="100px" height="70px" style="margin: 5px 0px 0px 5px"/>
+	</div>
+	
 	<div id="group-dialog" title="Create new user" class="add-edit-dialog">
 		<p class="validateTips">All form fields are required.</p>
 	
@@ -181,9 +189,19 @@
 		</form>
 	</div>
 
+	<div class="menu">
+		<ul>
+			<li class="admin-role-required"><a href="users.html"><i class="fa fa-fw fa-user"></i> Users</a></li>
+			<li class="admin-role-required"><a href="groups.html"><i class="fa fa-fw fa-group"></i> Groups</a></li>
+			<li><a href="profile.html"><i class="fa fa-fw fa-cog"></i> Profile</a></li>
+			<li><a href="ws/users/logout"><i class="fa fa-fw fa-sign-out"></i> Logout</a></li>
+		</ul>
+	</div>
 
-	<table id="groups-grid"></table>
-    <div id="groups-grid-pager"></div>
-    <button id="create-group">Create new group</button>
+	<div class="content">
+		<table id="groups-grid"></table>
+		<div id="groups-grid-pager"></div>
+		<button id="create-group">Create new group</button>
+	</div>
 </body>
 </html>

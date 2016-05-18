@@ -105,11 +105,4 @@ public abstract class AbstractWebService {
 	protected HttpSession getSession() {
 		return request.getSession();
 	}
-	
-	protected void assertAdmin() {
-		if (!securityContext.isUserInRole("UmAdmins")) {
-			throw new SecurityException("Administrator role required");
-		}
-	}
-
 }

@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-<link href='http://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>
+	<link href='css/montserrat.css' rel='stylesheet' type='text/css'>
 <meta charset="UTF-8">
 
-<title>Elegant Login - Designscrazed</title>
+<title>LDAP User Management</title>
 <style>
 body {
-    background: url('http://i.imgur.com/Eor57Ae.jpg') no-repeat fixed center center;
+    background: url('images/login-background.jpg') no-repeat fixed center center;
     background-size: cover;
     font-family: Montserrat;
 }
 
 .logo {
-    width: 213px;
+    width: 250px;
     height: 36px;
-    background: url('http://i.imgur.com/fd8Lcso.png') no-repeat;
     margin: 30px auto;
+    color: white;
+    font-size:  18px;
 }
 
 .login-block {
@@ -51,22 +52,22 @@ body {
 }
 
 .login-block input#username {
-    background: #fff url('http://i.imgur.com/u0XmBmv.png') 20px top no-repeat;
+    background: #fff url('images/username.png') 20px top no-repeat;
     background-size: 16px 80px;
 }
 
 .login-block input#username:focus {
-    background: #fff url('http://i.imgur.com/u0XmBmv.png') 20px bottom no-repeat;
+    background: #fff url('images/username.png') 20px bottom no-repeat;
     background-size: 16px 80px;
 }
 
 .login-block input#password {
-    background: #fff url('http://i.imgur.com/Qf83FTt.png') 20px top no-repeat;
+    background: #fff url('images/password.png') 20px top no-repeat;
     background-size: 16px 80px;
 }
 
 .login-block input#password:focus {
-    background: #fff url('http://i.imgur.com/Qf83FTt.png') 20px bottom no-repeat;
+    background: #fff url('images/password.png') 20px bottom no-repeat;
     background-size: 16px 80px;
 }
 
@@ -99,7 +100,7 @@ body {
 
 <body>
 
-<div class="logo"></div>
+<div class="logo">LDAP User Management</div>
 <div class="login-block">
     <h1>Login</h1>
     <form method=post action="j_security_check">

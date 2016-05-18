@@ -65,7 +65,6 @@ public class UsersWebService extends AbstractWebService {
 	@Produces(MediaType.APPLICATION_JSON)
 	@RolesAllowed({"UmAdmin"})
 	public JSONObject create(@FormParam("user") JSONObject userJson) { 
-		assertAdmin();
 		final User user = User.fromJSON(userJson, userDnPattern);
 		try { 
 			final User newUser = ldapClient.createUser(user);
@@ -85,7 +84,6 @@ public class UsersWebService extends AbstractWebService {
 	@Produces(MediaType.APPLICATION_JSON)
 	@RolesAllowed({"UmAdmin"})
 	public JSONObject update(@FormParam("user") JSONObject userJson)   { 
-		assertAdmin();
 		final User user = User.fromJSON(userJson, userDnPattern);
 		try { 
 			final User updatedUser = ldapClient.updateUser(user);
@@ -103,13 +101,19 @@ public class UsersWebService extends AbstractWebService {
 	@POST
 	@Produces(MediaType.APPLICATION_JSON)
 	@RolesAllowed({"UmAdmin", "UmUser"})
-	public JSONObject setPassword(@FormParam("uid")String uid, @FormParam("newPassword")String newPassword, @FormParam("oldPassword")String oldPassword) {
+	public JSONObject setPassword(@FormParam("newPassword")String newPassword, @FormParam("oldPassword")String oldPassword) {
 		try {
-			if (ldapClient.checkPassword(String.format(userDnPattern, LdapClient.escapeDnLiteral(uid)), oldPassword)) {
-				ldapClient.changePassword(uid, PasswordUtils.encryptPassword(newPassword));
-				return createSuccessStatus();
+			final User user = getCurrentUser();
+			if (user != null) {
+				final String uid = user.getUid();
+				if (ldapClient.checkPassword(String.format(userDnPattern, LdapClient.escapeDnLiteral(uid)), oldPassword)) {
+					ldapClient.changePassword(uid, PasswordUtils.encryptPassword(newPassword));
+					return createSuccessStatus();
+				} else {
+					return createFailureStatus("Old password doesn't match");
+				}
 			} else {
-				return createFailureStatus("Old password doesn't match");
+				return createFailureStatus("User is not logged");
 			}
 		} catch (UnsupportedEncodingException | NoSuchAlgorithmException | LDAPSDKException ex) {
 			return createFailureStatus(ex);
@@ -142,6 +146,14 @@ public class UsersWebService extends AbstractWebService {
 		} else {
 			return createFailureStatus("Cannot determine current user");
 		}
+	}
+	
+	@Path("isAdmin")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@RolesAllowed({"UmAdmin", "UmUser"})
+	public JSONObject isAdmin() {
+		return createSuccessStatus().put("isAdmin", securityContext.isUserInRole("UmAdmin"));
 	}
 	
 	@Path("logout")
