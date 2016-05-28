@@ -1,23 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>User management Web UI</title>
+
 	<link rel="stylesheet" href="font-awesome/css/font-awesome.min.css">
 	<link rel="stylesheet" href="css/main.css">
 	<script type="application/javascript" src="jquery/jquery-1.11.3.js"></script>
 	<script type="application/javascript" src="js/ajax-utils.js"></script>
-	<script type="application/javascript">
-		$(function() {
-			var ajaxUtils = new AjaxUtils($('#loading-div'));
-			
-			$.get("ws/users/isAdmin", function(data) {
-				if (data.status === "success" && data.isAdmin) {
-					$(".admin-role-required").show();
-				} else {
-					window.location.href = "profile.html";
-				}
-			});
-		});
-	</script>
+	<script type="application/javascript" src="js/index.js"></script>
 </head>
 
 

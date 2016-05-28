@@ -4,6 +4,40 @@
 	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
 	version="3.0">
 	
+	<filter>
+		<filter-name>CompressingFilter</filter-name>
+		<filter-class>com.github.ziplet.filter.compression.CompressingFilter</filter-class>
+	</filter>	
+	<filter-mapping>
+		<filter-name>CompressingFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	
+	<filter>
+		<filter-name>HttpHeadersFilter</filter-name>
+		<filter-class>org.javastack.servlet.filters.ResponseHeadersFilter</filter-class>
+		<init-param>
+			<param-name>X-XSS-Protection</param-name>
+			<param-value>1; mode=block</param-value>
+		</init-param>
+		<init-param>
+			<param-name>X-Frame-Options</param-name>
+			<param-value>deny</param-value>
+		</init-param>
+		<init-param>
+			<param-name>X-Content-Type-Options</param-name>
+			<param-value>nosniff</param-value>
+		</init-param>
+		<init-param>
+			<param-name>Content-Security-Policy</param-name>
+			<param-value>script-src 'self'</param-value>
+		</init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>HttpHeadersFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	
 	<servlet>
 		<servlet-name>rest-servlet</servlet-name>
 		<servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
@@ -21,6 +55,9 @@
 
 	<session-config>
 		<session-timeout>30</session-timeout>
+		<cookie-config>
+			<http-only>true</http-only>
+		</cookie-config>
 	</session-config>
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>

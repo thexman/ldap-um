@@ -21,10 +21,16 @@ function UserUtils(dialog) {
 		
 	this.updateTips = function (t) {
 		var tips = this.tips;
-		tips.text(t).addClass("ui-state-highlight");
-		setTimeout(function() { 
-			tips.removeClass("ui-state-highlight", 1500); 
-		}, 500);
+		tips.text(t);
+		if (t !== "") {
+			tips.show();
+			tips.addClass("ui-state-highlight");
+			setTimeout(function() { 
+				tips.removeClass("ui-state-highlight", 1500); 
+			}, 500);
+		} else {
+			tips.hide();
+		}		
 	};
 
 	this.checkLength = function(o, n, min, max) {
@@ -55,7 +61,12 @@ function UserUtils(dialog) {
 		this.uid.prop("readonly", false);
 		this.frm[0].reset();				
 		this.allFields().val("");
+		this.resetValidation();
+	};
+	
+	this.resetValidation = function() {
 		this.allFields().removeClass("ui-state-error");
+		this.updateTips("");
 	};
 		
 	this.closeDialog = function() {	
@@ -72,12 +83,13 @@ function UserUtils(dialog) {
 		this.email.val(user.email);
 		this.groups.val(user.groups);
 		this.password.val("");
+		this.resetValidation();
 	};
 	
 	this.validate = function (isNewUser) {		
 		console.log("---validateInternal---");				
 		var valid = true;
-		this.allFields().removeClass("ui-state-error");
+		this.resetValidation();
 	
 		valid = valid && this.checkLength(this.uid, "ID", 2, 100);
 		valid = valid && this.checkLength(this.firstName, "First name", 1, 50);

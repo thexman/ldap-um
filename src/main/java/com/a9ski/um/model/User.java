@@ -8,6 +8,8 @@ import org.json.JSONObject;
 
 public class User extends LdapEntity {
 
+	private static final String JSON_GROUP_SEPARATOR = "; ";
+
 	/**
 	 * 
 	 */
@@ -72,7 +74,11 @@ public class User extends LdapEntity {
 		json.put("displayName", displayName);
 		json.put("email", email);
 		if (groups != null) {
-			json.put("groups", StringUtils.join(groups, "; "));
+			String s = StringUtils.join(groups, JSON_GROUP_SEPARATOR);
+			if (StringUtils.isNotBlank(s)) {
+				s += JSON_GROUP_SEPARATOR;
+			}
+			json.put("groups", s);
 		}
 		return json;
 	}

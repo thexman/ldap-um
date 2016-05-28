@@ -1,7 +1,5 @@
 package com.a9ski.um.ws;
 
-import java.io.UnsupportedEncodingException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 
 import javax.ws.rs.FormParam;
@@ -14,18 +12,10 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import com.a9ski.um.config.ConfigurationProvider;
-import com.a9ski.um.config.ConfigurationProviderFactory;
-import com.a9ski.um.ldap.LdapClient;
 import com.a9ski.um.ldap.exceptions.LdapCustomException;
 import com.a9ski.um.model.Group;
-import com.a9ski.um.model.User;
-import com.a9ski.um.utils.PasswordUtils;
 import com.unboundid.ldap.sdk.LDAPException;
 import com.unboundid.util.LDAPSDKException;
 

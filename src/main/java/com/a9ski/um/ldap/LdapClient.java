@@ -12,6 +12,8 @@ import java.util.UUID;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.a9ski.um.ldap.exceptions.LdapCustomException;
 import com.a9ski.um.ldap.exceptions.LdapGroupExistsException;
@@ -39,7 +41,6 @@ import com.unboundid.util.LDAPSDKException;
 
 public class LdapClient {
 	
-	
 	private static final String USER_ATTRIBUTE_LAST_NAME = "sn";
 
 	private static final String USER_ATTRIBUTE_FIRST_NAME = "givenname";
@@ -59,6 +60,8 @@ public class LdapClient {
 	private static final String GROUP_ATTRIBUTE_GROUP_NAME = "cn";
 	
 	private final static String SPECIAL_CHARS = ",+\"\\<>;\r\n=/";
+
+	protected final Logger logger = LoggerFactory.getLogger(LdapClient.class);
 	
 	
 	private final String host;
@@ -132,12 +135,16 @@ public class LdapClient {
 	}
 	
 	public List<User> searchUsers(String search) throws LDAPSDKException {
-		final String uid = "(" + USER_ATTRIBUTE_UID + "=*" + Filter.encodeValue(search) + "*)";
-		final String displayName = "(" + USER_ATTRIBUTE_DISPLAY_NAME + "=*" + Filter.encodeValue(search) + "*)";
-		final String fullName = "(" + USER_ATTRIBUTE_FULL_NAME + "=*" + Filter.encodeValue(search) + "*)";
-		final String or = "(|" + uid + displayName + fullName + ")";
-		final String query = "(&" + or + userSearchFilter + ")";
-		return findUsers(Filter.create(query));
+		final List<User> users = new ArrayList<>();
+		if (StringUtils.isNotBlank(search)) {
+			final String uid = "(" + USER_ATTRIBUTE_UID + "=*" + Filter.encodeValue(search) + "*)";
+			final String displayName = "(" + USER_ATTRIBUTE_DISPLAY_NAME + "=*" + Filter.encodeValue(search) + "*)";
+			final String fullName = "(" + USER_ATTRIBUTE_FULL_NAME + "=*" + Filter.encodeValue(search) + "*)";
+			final String or = "(|" + uid + displayName + fullName + ")";
+			final String query = "(&" + or + userSearchFilter + ")";
+			users.addAll(findUsers(Filter.create(query)));
+		}
+		return users;
 	}
 
 	public List<User> listAllUsers() throws LDAPException {		
@@ -145,6 +152,7 @@ public class LdapClient {
 	}
 
 	private List<User> findUsers(final Filter filter ) throws LDAPException, LDAPSearchException {
+		logger.debug("Searching for LDAP users with filter: " + filter.toString());
 		final List<User> users = new ArrayList<>();
 		final LDAPConnection ldapConnection = getBindedConnection();		
 		
@@ -292,13 +300,18 @@ public class LdapClient {
 		
 	
 	public List<Group> searchGroups(String search) throws LDAPException {
-		final LDAPConnection ldapConnection = getBindedConnection();
-		try {
-			final Filter f = Filter.create(createGroupSearchQuery(groupSearchFilter));
-			return findGroups(ldapConnection, f);
-		} finally {
-			ldapConnection.close();
+		final List<Group> groups = new ArrayList<>();
+		if (StringUtils.isNotBlank(search)) {
+			final LDAPConnection ldapConnection = getBindedConnection();
+			try {
+				final Filter f = Filter.create(createGroupSearchQuery(search, false));
+				logger.debug("Searching for LDAP groups with filter: " + f.toString());
+				groups.addAll(findGroups(ldapConnection, f));
+			} finally {
+				ldapConnection.close();
+			}
 		}
+		return groups;
 	}
 	
 	public List<Group> listAllGroups() throws LDAPException, LdapCustomException {
@@ -332,7 +345,7 @@ public class LdapClient {
 
 	private Group findGroup(final LDAPConnection ldapConnection, String groupName)
 			throws LDAPException, LDAPSearchException {
-		final Filter f = Filter.create(createGroupExactMatchQuery(groupName));
+		final Filter f = Filter.create(createGroupSearchQuery(groupName, true));
 		final List<Group> groups = findGroups(ldapConnection, f);
 		if (CollectionUtils.isNotEmpty(groups)) {
 			return groups.get(0);
@@ -521,32 +534,22 @@ public class LdapClient {
 		return sb.toString();
 	}
 	
-	private String createGroupSearchQuery(String groupName) {
+	private String createGroupSearchQuery(String groupName, boolean exactMatch) {
 		final StringBuilder sb = new StringBuilder();
-		boolean hasAdditionalSearchCriteria = StringUtils.isNotEmpty(groupSearchFilter);
+		final boolean hasAdditionalSearchCriteria = StringUtils.isNotEmpty(groupSearchFilter);
+		String prefix = "";
+		String suffix = "";
 		if (hasAdditionalSearchCriteria) {
-			sb.append("(&").append(groupSearchFilter);			
+			prefix = "(&" + groupSearchFilter;
+			suffix = ")";
 		}
-		sb.append("(cn=*").append(groupName).append("*)");
-		if (hasAdditionalSearchCriteria) {
-			sb.append(")");
+		String like = "";
+		if (!exactMatch) {
+			like = "*";
 		}
+		sb.append(prefix).append("(cn=").append(like).append(Filter.encodeValue(groupName)).append(like).append(")").append(suffix);
 		return sb.toString();
 	}
-	
-	private String createGroupExactMatchQuery(String groupName) {
-		final StringBuilder sb = new StringBuilder();
-		boolean hasAdditionalSearchCriteria = StringUtils.isNotEmpty(groupSearchFilter);
-		if (hasAdditionalSearchCriteria) {
-			sb.append("(&").append(groupSearchFilter);			
-		}
-		sb.append("(cn=").append(groupName).append(")");
-		if (hasAdditionalSearchCriteria) {
-			sb.append(")");
-		}
-		return sb.toString();
-	}
-	
 
 	private String getGroupMembershipValue(User u) {
 		switch(groupMembershipValue) {

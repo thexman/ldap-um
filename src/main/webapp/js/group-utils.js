@@ -14,10 +14,16 @@ function GroupUtils(dialog) {
 		
 	this.updateTips = function (t) {
 		var tips = this.tips;
-		tips.text(t).addClass("ui-state-highlight");
-		setTimeout(function() { 
-			tips.removeClass("ui-state-highlight", 1500); 
-		}, 500);
+		tips.text(t);
+		if (t !== "") {
+			tips.show();
+			tips.addClass("ui-state-highlight");
+			setTimeout(function() { 
+				tips.removeClass("ui-state-highlight", 1500); 
+			}, 500);
+		} else {
+			tips.hide();
+		}		
 	};
 
 	this.checkLength = function(o, n, min, max) {
@@ -59,7 +65,12 @@ function GroupUtils(dialog) {
 		this.name.prop("readonly", false);
 		this.frm[0].reset();				
 		this.allFields().val("");
+		this.resetValidation();
+	};
+	
+	this.resetValidation = function() {
 		this.allFields().removeClass("ui-state-error");
+		this.updateTips("");
 	};
 		
 	this.closeDialog = function() {	
@@ -69,7 +80,8 @@ function GroupUtils(dialog) {
 	this.setGroup = function(group) {
 		this.name.prop("readonly", true);
 		this.name.val(group.name);
-		this.users.val(group.users); 
+		this.users.val(group.users);
+		this.resetValidation();
 	};
 	
 	this.formatUser = function (user, appendSuffix) {
