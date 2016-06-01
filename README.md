@@ -67,7 +67,8 @@ Release
       <password>your-jira-pwd</password>
     </server>
   </servers>
-</settings>``` 
+</settings>
+``` 
 More information can be obtain from [OSSRH guide](http://central.sonatype.org/pages/ossrh-guide.html) and [Maven configuration](http://central.sonatype.org/pages/apache-maven.html)
 1. `mvn clean install`
 2. `mvn release:prepare`
