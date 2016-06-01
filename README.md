@@ -3,8 +3,11 @@ Info
 
 This is minimalistic web application for managing users in LDAP server.
 It consist of three modules:
+
 1. User management (accessed only by the Administrators)
+
 2. Groups management (accessed only by the Administrators)
+
 3. Current user profile. (accessd by Administrators, Users)
 
 
@@ -70,11 +73,17 @@ Release
 </settings>
 ``` 
 More information can be obtain from [OSSRH guide](http://central.sonatype.org/pages/ossrh-guide.html) and [Maven configuration](http://central.sonatype.org/pages/apache-maven.html)
+
 1. `mvn clean install`
+
 2. `mvn release:prepare`
+
 3. checkout the newly created tag
+
 4. `mvn -Prelease clean javadoc:jar source:jar gpg:sign -Dgpg.passphrase=mysecret-password-for-gpg install org.sonatype.plugins:nexus-staging-maven-plugin:deploy` 
-OR just execute
+
+**OR** just execute
+
 `release.sh mysecret-password-for-gpg`
 
 Step 2 can be done manually: a) remove -SNAPSHOT from the version in all pom.xml files (the parent pom.xml and all module's pom.xml) b) commit the changes and create new tag with the version c) add -SNAPSHOT to all pom.xml files and increase the version (e.g. 1.0.0 to 1.0.1-SNAPSHOT)
