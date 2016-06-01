@@ -53,3 +53,27 @@ The application requires several system properties in order to specify the LDAP 
 | ldap-group-attribute | uniquemember | The attribute in the group entry that defines the users assigned to the group |
 | ldap-group-membership-value | DN | The value that is stored in the *ldap-group-attribute*. Either it is the full *DN* of the user, or it is only the *UID* of the user. Possible values are: **DN** or **UID** |
 | ldap-group-object-classes | groupOfUniqueNames,top | The LDAP object classes assigned to a newly created group |
+
+
+Release
+=================================================================================
+
+0. Change maven settings.xml and add account for OSSRH
+```<settings>
+  <servers>
+    <server>
+      <id>ossrh</id>
+      <username>your-jira-id</username>
+      <password>your-jira-pwd</password>
+    </server>
+  </servers>
+</settings>``` 
+More information can be obtain from [OSSRH guide](http://central.sonatype.org/pages/ossrh-guide.html) and [Maven configuration](http://central.sonatype.org/pages/apache-maven.html)
+1. `mvn clean install`
+2. `mvn release:prepare`
+3. checkout the newly created tag
+4. `mvn -Prelease clean javadoc:jar source:jar gpg:sign -Dgpg.passphrase=mysecret-password-for-gpg install org.sonatype.plugins:nexus-staging-maven-plugin:deploy` 
+OR just execute
+`release.sh mysecret-password-for-gpg`
+
+Step 2 can be done manually: a) remove -SNAPSHOT from the version in all pom.xml files (the parent pom.xml and all module's pom.xml) b) commit the changes and create new tag with the version c) add -SNAPSHOT to all pom.xml files and increase the version (e.g. 1.0.0 to 1.0.1-SNAPSHOT)
