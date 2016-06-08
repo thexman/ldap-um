@@ -38,9 +38,11 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.a9ski.um.ldap.LdapClient;
+import com.a9ski.um.ldap.exceptions.LdapCustomException;
 import com.a9ski.um.model.User;
 import com.a9ski.um.utils.PasswordUtils;
 import com.unboundid.ldap.sdk.LDAPException;
@@ -63,7 +65,7 @@ public class UsersWebService extends AbstractWebService {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@RolesAllowed({"UmAdmin"})
-	public JSONArray listAllUsers() throws LDAPException {
+	public JSONArray listAllUsers() throws LDAPException, LdapCustomException {
 		final JSONArray j = new JSONArray();
 		for(final User u : ldapClient.listAllUsers()) {
 			j.put(u.toJSON());
@@ -75,7 +77,7 @@ public class UsersWebService extends AbstractWebService {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@RolesAllowed({"UmAdmin"})
-	public JSONObject listAllUserRows() throws LDAPException {		
+	public JSONObject listAllUserRows() throws LDAPException, JSONException, LdapCustomException {		
 		return new JSONObject().put("rows", listAllUsers());
 	}
 	

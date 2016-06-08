@@ -88,7 +88,7 @@ public class GroupsWebService extends AbstractWebService {
 		try {
 			final Set<String> groups = ldapClient.searchGroupNames(search);
 			return createSuccessStatus().put("groups", new JSONArray(groups));
-		} catch (final LDAPException ex) {
+		} catch (final LDAPException | LdapCustomException ex) {
 			return createFailureStatus(ex);
 		}
 	}

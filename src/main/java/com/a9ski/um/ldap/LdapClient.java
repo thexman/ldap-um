@@ -23,6 +23,7 @@ import static com.a9ski.um.utils.DeltaUtils.calculateDeltaAdded;
 import static com.a9ski.um.utils.DeltaUtils.calculateDeltaDeleted;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +40,7 @@ import com.a9ski.um.ldap.exceptions.LdapGroupExistsException;
 import com.a9ski.um.ldap.exceptions.LdapUserExistsException;
 import com.a9ski.um.model.Group;
 import com.a9ski.um.model.User;
+import com.a9ski.um.utils.DeltaUtils;
 import com.unboundid.ldap.sdk.AddRequest;
 import com.unboundid.ldap.sdk.Attribute;
 import com.unboundid.ldap.sdk.BindRequest;
@@ -166,11 +168,11 @@ public class LdapClient {
 		return users;
 	}
 
-	public List<User> listAllUsers() throws LDAPException {		
+	public List<User> listAllUsers() throws LDAPException, LdapCustomException {		
 		return findUsers(Filter.create(userSearchFilter));		
 	}
 
-	private List<User> findUsers(final Filter filter ) throws LDAPException, LDAPSearchException {
+	private List<User> findUsers(final Filter filter ) throws LDAPException, LDAPSearchException, LdapCustomException {
 		logger.debug("Searching for LDAP users with filter: " + filter.toString());
 		final List<User> users = new ArrayList<>();
 		final LDAPConnection ldapConnection = getBindedConnection();		
@@ -237,12 +239,12 @@ public class LdapClient {
 	public Group createGroup(final Group g) throws LDAPSDKException {
 		final LDAPConnection ldapConnection = getBindedConnection();				
 		try {
-			final Group existingGroup = findGroup(ldapConnection, g.getGroupName());
+			final Group existingGroup = findGroup(ldapConnection, g.getGroupName(), false);
 			if (existingGroup != null) {				
 				throw new LdapGroupExistsException(String.format("Group with name '%s' already exists", g.getGroupName()));
 			}
 			createGroup(ldapConnection, g);
-			return findGroup(ldapConnection, g.getGroupName());
+			return findGroup(ldapConnection, g.getGroupName(), false);
 		} finally {
 			ldapConnection.close();
 		}
@@ -251,12 +253,12 @@ public class LdapClient {
 	public Group updateGroup(Group g) throws LDAPSDKException {
 		final LDAPConnection ldapConnection = getBindedConnection();				
 		try {
-			final Group existingGroup = findGroup(ldapConnection, g.getGroupName());
+			final Group existingGroup = findGroup(ldapConnection, g.getGroupName(), true);
 			if (existingGroup == null) {				
 				throw new LdapCustomException("Group doesn't exists");
 			}
-			updateGroup(ldapConnection, g);
-			return findGroup(ldapConnection, g.getGroupName());
+			updateGroup(ldapConnection, g, existingGroup);
+			return findGroup(ldapConnection, g.getGroupName(), false);
 		} finally {
 			ldapConnection.close();
 		}
@@ -289,7 +291,7 @@ public class LdapClient {
 		}
 	}
 	
-	private void updateGroup(final LDAPConnection ldapConnection, final Group g) throws LDAPSDKException {		
+	private void updateGroup(final LDAPConnection ldapConnection, final Group g, final Group existingGroup) throws LDAPSDKException {		
 		if (CollectionUtils.isNotEmpty(g.getUsers())) {
 			final Set<User> users = new HashSet<User>();
 			for(final User u : g.getUsers()) {
@@ -300,11 +302,17 @@ public class LdapClient {
 					}
 				}
 			}
+			
+			final Set<String> oldUsers = getGroupMembershipValues(existingGroup.getUsers());
+			final Set<String> newUsers = getGroupMembershipValues(users);
+			
 			final String dn = String.format("cn=%s,%s", g.getGroupName(), groupBaseDn);
-			final List<Modification> modifications = new ArrayList<>();
-			modifications.add(new Modification(ModificationType.DELETE, groupAttribute));
-			for(final User u : users) {
-				modifications.add(new Modification(ModificationType.ADD, groupAttribute, getGroupMembershipValue(u)));
+			final List<Modification> modifications = new ArrayList<>();			
+			for(final String val : DeltaUtils.calculateDeltaAdded(oldUsers, newUsers)) {								
+				modifications.add(new Modification(ModificationType.ADD, groupAttribute, val));
+			}
+			for(final String val : DeltaUtils.calculateDeltaDeleted(oldUsers, newUsers)) {
+				modifications.add(new Modification(ModificationType.DELETE, groupAttribute, val));
 			}
 			final ModifyRequest request = new ModifyRequest(dn, modifications);  
 			ldapConnection.modify(request);
@@ -313,19 +321,19 @@ public class LdapClient {
 		}
 	}
 
-	public Set<String> searchGroupNames(String search) throws LDAPException {
+	public Set<String> searchGroupNames(String search) throws LDAPException, LdapCustomException {
 		return getGroupNames(searchGroups(search));
 	}
 		
 	
-	public List<Group> searchGroups(String search) throws LDAPException {
+	public List<Group> searchGroups(String search) throws LDAPException, LdapCustomException {
 		final List<Group> groups = new ArrayList<>();
 		if (StringUtils.isNotBlank(search)) {
 			final LDAPConnection ldapConnection = getBindedConnection();
 			try {
 				final Filter f = Filter.create(createGroupSearchQuery(search, false));
 				logger.debug("Searching for LDAP groups with filter: " + f.toString());
-				groups.addAll(findGroups(ldapConnection, f));
+				groups.addAll(findGroups(ldapConnection, f, false));
 			} finally {
 				ldapConnection.close();
 			}
@@ -353,27 +361,27 @@ public class LdapClient {
 		}		
 	}
 	
-	public Group findGroup(String groupName) throws LDAPException {
+	public Group findGroup(String groupName) throws LDAPException, LdapCustomException {
 		final LDAPConnection ldapConnection = getBindedConnection();
 		try {
-			return findGroup(ldapConnection, groupName);
+			return findGroup(ldapConnection, groupName, false);
 		} finally {
 			ldapConnection.close();
 		}
 	}
 
-	private Group findGroup(final LDAPConnection ldapConnection, String groupName)
-			throws LDAPException, LDAPSearchException {
+	private Group findGroup(final LDAPConnection ldapConnection, String groupName, boolean resolveUsers)
+			throws LDAPException, LDAPSearchException, LdapCustomException {
 		final Filter f = Filter.create(createGroupSearchQuery(groupName, true));
-		final List<Group> groups = findGroups(ldapConnection, f);
+		final List<Group> groups = findGroups(ldapConnection, f, resolveUsers);
 		if (CollectionUtils.isNotEmpty(groups)) {
 			return groups.get(0);
 		} else {
 			return null;
 		}
 	}
-
-	private void addUserToGroups(final LDAPConnection ldapConnection, User u, final Set<String> groups)	throws LDAPException {
+	
+	private void addUserToGroups(final LDAPConnection ldapConnection, User u, final Set<String> groups)	throws LDAPException, LdapCustomException {
 		if (CollectionUtils.isNotEmpty(groups)) {
 			for(final String groupName : groups) {
 				final Group g = findGroup(groupName);
@@ -382,7 +390,7 @@ public class LdapClient {
 		}
 	}
 	
-	private void deletedUserFromGroups(final LDAPConnection ldapConnection, User u, final Set<String> groups)	throws LDAPException {
+	private void deletedUserFromGroups(final LDAPConnection ldapConnection, User u, final Set<String> groups)	throws LDAPException, LdapCustomException {
 		if (CollectionUtils.isNotEmpty(groups)) {
 			for(final String groupName : groups) {
 				final Group g = findGroup(groupName);
@@ -392,7 +400,7 @@ public class LdapClient {
 	}
 
 	
-	private void createUser(final LDAPConnection ldapConnection, User u) throws LDAPException {
+	private void createUser(final LDAPConnection ldapConnection, User u) throws LDAPException, LdapCustomException {
 		final String dn = String.format("uid=%s,%s", u.getUid(), userBaseDn);
 		final List<Attribute> attributes = new ArrayList<>();
 		attributes.add(new Attribute(USER_ATTRIBUTE_FULL_NAME, u.getFullName()));
@@ -465,7 +473,7 @@ public class LdapClient {
 		return u;
 	}
 
-	private User toUser(LDAPConnection ldapConnection, final ReadOnlyEntry e, boolean loadUserGroups) throws LDAPException {
+	private User toUser(LDAPConnection ldapConnection, final ReadOnlyEntry e, boolean loadUserGroups) throws LDAPException, LdapCustomException {
 		final String fullName = e.getAttributeValue(USER_ATTRIBUTE_FULL_NAME);
 		final String displayName = e.getAttributeValue(USER_ATTRIBUTE_DISPLAY_NAME);
 		final String email = e.getAttributeValue(USER_ATTRIBUTE_EMAIL);
@@ -484,9 +492,14 @@ public class LdapClient {
 		final List<User> users = new ArrayList<>();
 		final String[] members = e.getAttributeValues(groupAttribute);
 		for (final String member : members) {
+			final User u;
 			switch (groupMembershipValue) {
-				case DN: users.add(findUserByDn(ldapConnection, member, false)); break;
-				case UID: users.add(findUserByUid(ldapConnection, member, false)); break;
+				case DN: u = findUserByDn(ldapConnection, member, false); break;
+				case UID: u = findUserByUid(ldapConnection, member, false); break;
+				default: u = null;
+			}
+			if (u != null) {
+				users.add(u);
 			}
 		}
 		
@@ -516,26 +529,30 @@ public class LdapClient {
 		return ldapConnection;
 	}
 	
-	private Set<String> findUserGroups(LDAPConnection ldapConnection, User u) throws LDAPException {
+	private Set<String> findUserGroups(LDAPConnection ldapConnection, User u) throws LDAPException, LdapCustomException {
 		final Filter f = Filter.create(createGroupSearchQuery(u));
-		final List<Group> userGroups = findGroups(ldapConnection, f);
+		final List<Group> userGroups = findGroups(ldapConnection, f, false);
 		return getGroupNames(userGroups);
 	}
 
 	private Set<String> getGroupNames(final List<Group> groups) {
 		final Set<String> groupNames = new TreeSet<String>();
-		for(final Group g : groups) {
-			groupNames.add(g.getGroupName());
-		}
+		groups.stream().forEach(g -> groupNames.add(g.getGroupName()));
 		return groupNames;
 	}
 
-	private List<Group> findGroups(LDAPConnection ldapConnection, final Filter f) throws LDAPSearchException {
+	private List<Group> findGroups(LDAPConnection ldapConnection, final Filter f, boolean resolveUsers) throws LDAPException, LdapCustomException {
 		final SearchRequest searchRequest = new SearchRequest(groupBaseDn, SearchScope.SUB, f);
 		final SearchResult r = ldapConnection.search(searchRequest);
 		final List<Group> groups = new ArrayList<>();
 		for(SearchResultEntry e : r.getSearchEntries()) {
-			groups.add(toGroup(e));
+			final Group g;
+			if (resolveUsers) {
+				g = toGroup(ldapConnection, e);
+			} else {
+				g = toGroup(e);
+			}
+			groups.add(g);
 		}
 		return groups;
 	}
@@ -568,6 +585,14 @@ public class LdapClient {
 		}
 		sb.append(prefix).append("(cn=").append(like).append(Filter.encodeValue(groupName)).append(like).append(")").append(suffix);
 		return sb.toString();
+	}
+	
+	private Set<String> getGroupMembershipValues(Collection<User> users) {
+		final Set<String> values = new HashSet<>();
+		if (CollectionUtils.isNotEmpty(users)) {
+			users.stream().forEach(u -> values.add(getGroupMembershipValue(u)));
+		}
+		return values;
 	}
 
 	private String getGroupMembershipValue(User u) {
