@@ -4,7 +4,7 @@
 	<groupId>com.a9ski</groupId>
 	<artifactId>ldap-um</artifactId>
 	<packaging>war</packaging>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 	<name>LDAP User Management Web UI</name>
 	<description>LDAP User Management Web UI</description>
 	
@@ -20,7 +20,7 @@
 		<developer>
 			<id>thexman</id>
 			<name>Kiril Arabadzhiyski</name>
-			<email>thexman@dir.bg<email>
+			<email>thexman@dir.bg</email>
 			<url>https://github.com/thexman</url>
 		</developer>
 	</developers>
