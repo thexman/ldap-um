@@ -36,7 +36,9 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.ConstructorUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -44,6 +46,7 @@ import org.json.JSONObject;
 import com.a9ski.um.ldap.LdapClient;
 import com.a9ski.um.ldap.exceptions.LdapCustomException;
 import com.a9ski.um.model.User;
+import com.a9ski.um.security.PasswordPolicyChecker;
 import com.a9ski.um.utils.PasswordUtils;
 import com.unboundid.ldap.sdk.LDAPException;
 import com.unboundid.util.LDAPSDKException;
@@ -51,12 +54,24 @@ import com.unboundid.util.LDAPSDKException;
 @Path("/users")
 public class UsersWebService extends AbstractWebService {
 
-	private final String userDnPattern;	
+	private final String userDnPattern;
+	
+	private final PasswordPolicyChecker passwordPolicyChecker;
+	
+	
 	public UsersWebService() {
 		super();
 		
 		
 		final String userBaseDn = configProvider.getUserBaseDn();
+		
+		try {
+			@SuppressWarnings("unchecked")
+			final Class<? extends PasswordPolicyChecker> c = (Class<? extends PasswordPolicyChecker>) ClassUtils.getClass(configProvider.getPasswordPolicyCheckerClass());
+			passwordPolicyChecker = ConstructorUtils.invokeConstructor(c, configProvider.getPasswordPolicyCheckerParams());
+		} catch (final ReflectiveOperationException ex) {
+			throw new RuntimeException("Cannot initialize password policy checker", ex);
+		}
 		
 		userDnPattern = StringUtils.replace(StringUtils.replace(configProvider.getUserDnPattern(), "<user-base-dn>", userBaseDn), "<user-id>", "%s");
 	}
@@ -109,11 +124,11 @@ public class UsersWebService extends AbstractWebService {
 		try { 
 			final User updatedUser = ldapClient.updateUser(user);
 			final String password = userJson.optString("password");
-			if (StringUtils.isNotEmpty(password)) {
-				ldapClient.changePassword(updatedUser.getUid(), password);
+			if (StringUtils.isNotEmpty(password)) {				
+				changePassword(updatedUser, password);
 			}
 			return createSuccessStatus().put("user", updatedUser.toJSON());
-		} catch (LDAPSDKException ex) {
+		} catch (LDAPSDKException | UnsupportedEncodingException | NoSuchAlgorithmException ex) {
 			return createFailureStatus(ex);
 		}
 	}
@@ -126,10 +141,8 @@ public class UsersWebService extends AbstractWebService {
 		try {
 			final User user = getCurrentUser();
 			if (user != null) {
-				final String uid = user.getUid();
-				if (ldapClient.checkPassword(String.format(userDnPattern, LdapClient.escapeDnLiteral(uid)), oldPassword)) {
-					ldapClient.changePassword(uid, PasswordUtils.encryptPassword(newPassword));
-					return createSuccessStatus();
+				if (ldapClient.checkPassword(String.format(userDnPattern, LdapClient.escapeDnLiteral(user.getUid())), oldPassword)) {
+					return changePassword(user, newPassword);
 				} else {
 					return createFailureStatus("Old password doesn't match");
 				}
@@ -138,6 +151,15 @@ public class UsersWebService extends AbstractWebService {
 			}
 		} catch (UnsupportedEncodingException | NoSuchAlgorithmException | LDAPSDKException ex) {
 			return createFailureStatus(ex);
+		}
+	}
+
+	private JSONObject changePassword(final User user, String newPassword) throws LDAPSDKException, UnsupportedEncodingException, NoSuchAlgorithmException {
+		if (passwordPolicyChecker.checkPassword(user.toJSON().toString(), newPassword)) {
+			ldapClient.changePassword(user.getUid(), PasswordUtils.encryptPassword(newPassword));
+			return createSuccessStatus();
+		} else {
+			return createFailureStatus("The password does not meet the password policy requirements.");
 		}
 	}
 	

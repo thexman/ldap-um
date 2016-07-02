@@ -56,6 +56,8 @@ The application requires several system properties in order to specify the LDAP 
 | ldap-group-attribute | uniquemember | The attribute in the group entry that defines the users assigned to the group |
 | ldap-group-membership-value | DN | The value that is stored in the *ldap-group-attribute*. Either it is the full *DN* of the user, or it is only the *UID* of the user. Possible values are: **DN** or **UID** |
 | ldap-group-object-classes | groupOfUniqueNames,top | The LDAP object classes assigned to a newly created group |
+| password-policy-checker-class | com.a9ski.um.security.RegexPasswordChecker | The class name of the object responsible for validating the new user password during password change|
+| password-policy-checker-param | (?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[\!\@\#\$\%\^\&\+\=\`\~\*\(\)\-\_\[\]\{\}\;\:\'\"\\\|\,\<\.\>\/\?])(?=\S+$).{7,} | The parameter passed during creationg of the object defined in password-policy-checker-class |
 
 
 Release

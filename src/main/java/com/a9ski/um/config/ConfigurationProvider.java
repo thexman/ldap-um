@@ -38,5 +38,6 @@ public interface ConfigurationProvider extends Serializable {
 	public GroupMembershipValue getGroupMembershipValue();
 	public String getGroupDnPattern();
 	public String[] getNewGroupObjectClasses();
-	
+	public String getPasswordPolicyCheckerClass();
+	public Object getPasswordPolicyCheckerParams();
 }

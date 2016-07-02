@@ -22,6 +22,7 @@ package com.a9ski.um.config;
 import org.apache.commons.lang3.StringUtils;
 
 import com.a9ski.um.ldap.GroupMembershipValue;
+import com.a9ski.um.security.RegexPasswordChecker;
 
 public class SystemPropertiesConfigurationProvider implements ConfigurationProvider {
 
@@ -101,6 +102,26 @@ public class SystemPropertiesConfigurationProvider implements ConfigurationProvi
 	public String[] getNewGroupObjectClasses() {
 		final String objectClasses = System.getProperty("ldap-group-object-classes", "groupOfUniqueNames,top");
 		return StringUtils.stripAll(objectClasses.split(","));
+	}
+
+	@Override
+	public String getPasswordPolicyCheckerClass() {
+		final String defaultChecker = RegexPasswordChecker.class.getName();
+		return System.getProperty("password-policy-checker-class", defaultChecker);
+	}
+
+	@Override
+	public String getPasswordPolicyCheckerParams() {
+		/*	 	
+	 	 * (?=.*[0-9])       # a digit must occur at least once
+	 	 * (?=.*[a-z])       # a lower case letter must occur at least once
+	 	 * (?=.*[A-Z])       # an upper case letter must occur at least once
+	 	 * (?=.*[!@#$%^&+=]) # a special character must occur at least once
+	 	 * (?=\S+$)          # no whitespace allowed in the entire string
+	 	 * .{7,}             # anything, at least seven places though
+		 */
+		final String defaultRegEx = "(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[\\!\\@\\#\\$\\%\\^\\&\\+\\=\\`\\~\\*\\(\\)\\-\\_\\[\\]\\{\\}\\;\\:\\'\\\"\\\\\\|\\,\\<\\.\\>\\/\\?])(?=\\S+$).{7,}";
+		return System.getProperty("password-policy-checker-param", defaultRegEx);
 	}
 
 }
